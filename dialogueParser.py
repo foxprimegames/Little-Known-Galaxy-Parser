@@ -1,5 +1,6 @@
 import os
 import re
+import fnmatch
 
 # Function to parse a single NPC file
 def parse_npc_file(data, debug_file):
@@ -25,7 +26,6 @@ def parse_npc_file(data, debug_file):
         if region_start_match:
             in_section = True
             current_section = region_start_match.group(1).strip()
-            current_section = re.sub(r'\s*\.*$', '', current_section).strip()
             debug_file.write(f"Entering section: {current_section}\n")
 
         # Check for region end
@@ -72,10 +72,23 @@ def parse_npc_file(data, debug_file):
 # Function to format dialogues
 def format_dialogues(npc_name, dialogues):
     formatted_dialogues = {}
+    section_names_map = {
+        "S": "Stranger",
+        "A": "Acquaintance",
+        "F": "Friend",
+        "G": "Good Friend",
+        "B": "Best Friend",
+        "E": "Engaged",
+        "M": "Married"
+    }
+
     for dialogue in dialogues:
         section = dialogue["section"]
-        if section not in formatted_dialogues:
-            formatted_dialogues[section] = []
+        formatted_section = section_names_map.get(section, section)  # Use mapped section name if available
+
+        if formatted_section not in formatted_dialogues:
+            formatted_dialogues[formatted_section] = []
+        
         formatted_line = f"{{{{Dialogue|npc={npc_name}"
         for i, line in enumerate(dialogue["lines"]):
             formatted_line += f"|{line['text']}"
@@ -85,7 +98,9 @@ def format_dialogues(npc_name, dialogues):
                 else:
                     formatted_line += f"|emote{i+1}={line['emote']}"
         formatted_line += "}}"
-        formatted_dialogues[section].append(formatted_line)
+        
+        formatted_dialogues[formatted_section].append(formatted_line)
+    
     return formatted_dialogues
 
 # Main script to process all files in Input/TextAsset folder
@@ -95,16 +110,35 @@ output_folder = "Output/Dialogues"
 # Ensure output folder exists
 os.makedirs(output_folder, exist_ok=True)
 
+# List of patterns to ignore
+ignore_patterns = [
+    "*Achievements*",
+    "*Animals*",
+    "*Collections*",
+    "*Emails*",
+    "*Events*",
+    "*General*",
+    "*Items*",
+    "*Locations*",
+    "*Quests*",
+    "*UI*",
+    "*Upgrades*",
+    "*TBD*"
+]
+
 for filename in os.listdir(input_folder):
+    if any(fnmatch.fnmatch(filename, pattern) for pattern in ignore_patterns):
+        continue  # Skip processing this file
+    
     if filename.endswith(".txt"):
         input_filepath = os.path.join(input_folder, filename)
         
-        # Read the file
-        with open(input_filepath, 'r') as file:
+        # Read the file with UTF-8 encoding
+        with open(input_filepath, 'r', encoding='utf-8') as file:
             data = file.read()
 
-        # Parse the content and write debug info to a file
-        with open('debug_output.txt', 'w') as debug_file:
+        # Parse the content and write debug info to a file with UTF-8 encoding
+        with open('debug_output.txt', 'w', encoding='utf-8') as debug_file:
             npc_name, dialogues = parse_npc_file(data, debug_file)
 
         # Format the dialogues
@@ -113,8 +147,10 @@ for filename in os.listdir(input_folder):
         # Write the output to a file named after the NPC with _Dialogue appended
         output_filename = f"{npc_name}_Dialogue.txt"
         output_filepath = os.path.join(output_folder, output_filename)
-        with open(output_filepath, 'w') as output_file:
+        with open(output_filepath, 'w', encoding='utf-8') as output_file:
             for section, lines in formatted_dialogues.items():
-                output_file.write(f"=== {section} ===\n")
+                # Ensure proper case and formatting of section header
+                proper_case_section = ' '.join(word.capitalize() for word in section.split())
+                output_file.write(f"=== {proper_case_section} ===\n")
                 for line in lines:
                     output_file.write(line + '\n')
