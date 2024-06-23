@@ -104,7 +104,7 @@ def format_dialogues(npc_name, dialogues):
     return formatted_dialogues
 
 # Main script to process files in the input folder
-input_folder = "Input/TextAsset"
+input_folder = "Input/Assets/TextAsset"
 output_folder = "Output/Dialogues"
 
 # Ensure output folder exists

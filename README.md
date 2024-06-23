@@ -1,7 +1,54 @@
 Collection of Parser Items for the Little-Known Galaxy wiki found at: https://lkg.wiki.gg/ <br>
 Putting these into output files, so we can do a compare between patches, and only update pages that need it.
 
+# Parser Collections --
 dialogueParser.py -- <br>
-  Looks at a file folder: Input/TextAsset (should be replaced with each patch)<br>
+  Looks at a file folder: Input/Assets/TextAsset (should be replaced with each patch)<br>
   Parses the "English_NPCNAME.txt" files into a format used by the wiki. WIKI: Each region should be a section on the NPC's /Dialogue page. Emotes to text should be associated correctly.<br>
   Puts each file in file folder: Output/Dialogues<br>
+
+emailParser.py -- <br>
+  Looks at a email file in folder: Input/Assets/TextAsset (should be replaced with each patch)<br>
+  Looks at asset files in Input/Assets/MonoBehavior to map email attachments.<br>
+  Puts results in file folder: Output/Emails<br>
+
+
+
+# Getting the Assets --
+1. Download an application that allows you to look at the assets. I use [AssetRipper](https://github.com/AssetRipper/AssetRipper) for parsing and [AssetStudio](https://github.com/Perfare/AssetStudio) for sprites, and looking things up on the fly.
+2. In the prefered asset manager, load the `Little-Known Galaxy_Data` folder.
+  * Windows: `C:/Program Files (x86)/Steam/steamapps/common/Little-Known Galaxy/Little-Known Galaxy_Data`
+  * Linux: `${HOME}/.steam/steam/steamapps/common/Little-Known Galaxy/Little-Known Galaxy_Data`
+3. Export -> All Files/Assets (depending on your prefered application). Put it into a folder, I prefer to put it in a folder with the patch number, but you do  you.
+
+## Directory Structure
+```
+├── AuxiliaryFiles
+└── ExportedProject
+    ├── Assets
+    │   ├── AnimationClip
+    │   ├── AnimatorController
+    │   ├── AnimatorOverrideController
+    │   ├── AudioClip
+    │   ├── AudioMixerController
+    │   ├── Editor
+    │   ├── Font
+    │   ├── LightingSettings
+    │   ├── Material
+    │   ├── Mesh
+    │   ├── MonoBehaviour            # This is where the character and item data is.
+    │   ├── PhysicsMaterial2D
+    │   ├── Plugins
+    │   ├── PrefabInstance
+    │   ├── RenderTexture
+    │   ├── Resources
+    │   ├── Scenes
+    │   ├── Scripts                  
+    │   ├── Shader
+    │   ├── Sprite
+    │   ├── StreamingAssets
+    │   ├── TextAsset              # This is where the files for the email and dialogue parser are
+    │   └── Texture2D
+    ├── Packages
+    └── ProjectSettings
+```

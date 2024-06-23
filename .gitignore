@@ -1,4 +1,4 @@
 input/
 output/
-regionNames.py
-debug_output.txt
+.hidden/
+__pycache__
