@@ -2,15 +2,20 @@ Collection of Parser Items for the Little-Known Galaxy wiki found at: https://lk
 Putting these into output files, so we can do a compare between patches, and only update pages that need it.
 
 # Parser Collections --
-dialogueParser.py -- <br>
+dialogue_parser.py -- <br>
   Looks at a file folder: Input/Assets/TextAsset (should be replaced with each patch)<br>
   Parses the "English_NPCNAME.txt" files into a format used by the wiki. WIKI: Each region should be a section on the NPC's /Dialogue page. Emotes to text should be associated correctly.<br>
   Puts each file in file folder: Output/Dialogues<br>
 
-emailParser.py -- <br>
+email_parser.py -- <br>
   Looks at a email file in folder: Input/Assets/TextAsset (should be replaced with each patch)<br>
   Looks at asset files in Input/Assets/MonoBehavior to map email attachments.<br>
   Puts results in file folder: Output/Emails<br>
+
+recipe_crafting_parser.py --<br>
+  Looks at assets files in Input/Assets/MonoBehavior that start with `crafting_` to get a product, quantity, ingredients, quantity
+  Looks at the product to get category and assigns a machine based on that category.
+  Puts results in file folder: Output/Recipes
 
 
 
@@ -36,7 +41,7 @@ emailParser.py -- <br>
     │   ├── LightingSettings
     │   ├── Material
     │   ├── Mesh
-    │   ├── MonoBehaviour            # This is where the character and item data is.
+    │   ├── MonoBehaviour     # This is where the character and item data is.
     │   ├── PhysicsMaterial2D
     │   ├── Plugins
     │   ├── PrefabInstance
@@ -47,7 +52,7 @@ emailParser.py -- <br>
     │   ├── Shader
     │   ├── Sprite
     │   ├── StreamingAssets
-    │   ├── TextAsset              # This is where the files for the email and dialogue parser are
+    │   ├── TextAsset         # This is where the files for the email and dialogue parser are
     │   └── Texture2D
     ├── Packages
     └── ProjectSettings

@@ -30,8 +30,8 @@ def parse_recipe_assets(input_directory, guid_mapping, debug_file):
                 product_info = guid_mapping.get(product_guid, {})
                 product_name = product_info.get('name', 'unknown_item')
 
-                # Extract product yield
-                yield_match = re.search(r'amountOfItem:\s*(\d+)', data)
+                # Extract product yield from purchaseBundleAmt
+                yield_match = re.search(r'purchaseBundleAmt:\s*(\d+)', data)
                 product_yield = yield_match.group(1) if yield_match else '1'
 
                 # Extract product item category
