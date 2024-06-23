@@ -1,103 +1,132 @@
-import json
-import re
 import os
-from guid_mapper import load_guid_to_item_mapping
-from email_asset_parser import parse_email_assets
+import re
+import json
 
-def parse_emails(file_path, guid_to_item, email_assets, debug_file):
+def load_guid_mapping(mapping_file_path):
     """
-    Parses emails from the given file and includes item information.
+    Loads the GUID mapping from the specified file.
 
     Args:
-        file_path (str): The path to the file containing email data.
-        guid_to_item (dict): A dictionary mapping GUIDs to item names.
-        email_assets (dict): A dictionary mapping saveIDs to items and their quantities.
-        debug_file (file object): The file object to write debug information to.
+        mapping_file_path (str): The path to the GUID mapping file.
 
     Returns:
-        str: The formatted content of all emails.
+        dict: A dictionary mapping GUIDs to their corresponding information.
     """
-    # Read the content of the file
+    guid_mapping = {}
+    with open(mapping_file_path, 'r') as file:
+        for line in file:
+            parts = line.strip().split(',')
+            if len(parts) == 4:
+                guid, filename, save_id, name = parts
+                guid_mapping[save_id] = {
+                    'guid': guid,
+                    'filename': filename,
+                    'name': name
+                }
+                guid_mapping[guid] = {
+                    'filename': filename,
+                    'save_id': save_id,
+                    'name': name
+                }
+    return guid_mapping
+
+def load_english_emails(file_path):
+    """
+    Loads the English emails from the specified file.
+
+    Args:
+        file_path (str): The path to the English emails file.
+
+    Returns:
+        list: A list of dictionaries containing email information.
+    """
+    emails = []
     with open(file_path, 'r') as file:
         data = file.read()
+        email_sections = data.split('//EMAIL_')[1:]
+        for section in email_sections:
+            trigger_match = re.match(r'(.*?)\s*{', section, re.DOTALL)
+            trigger = trigger_match.group(1).strip() if trigger_match else ""
+            json_part_match = re.search(r'{(.*?)}', section, re.DOTALL)
+            json_part = json_part_match.group(1).strip() if json_part_match else ""
+            json_part = json_part.replace('\n', '').replace('\r', '')
+            try:
+                email_data = json.loads(f"{{{json_part}}}")
+                email_data['trigger'] = trigger
+                emails.append(email_data)
+            except json.JSONDecodeError:
+                continue
+    return emails
 
-    # Split the data by each email to handle it in parts
-    email_sections = data.split('//EMAIL_')[1:]
+def parse_email_assets(input_directory, guid_mapping, debug_file):
+    email_subjects = {}
+    email_bodies = {}
+    english_emails_path = os.path.join(input_directory, 'TextAsset', 'English_Emails.txt')
+    
+    # Load email subjects and bodies from English_Emails.txt
+    with open(english_emails_path, 'r') as file:
+        data = file.read()
+        email_entries = re.findall(r'{.*?}', data, re.DOTALL)
+        for entry in email_entries:
+            save_id_match = re.search(r'"emailKey":\s*"([^"]+)"', entry)
+            subject_match = re.search(r'"emailSubject":\s*"([^"]+)"', entry)
+            body_match = re.search(r'"emailBody":\s*"([^"]+)"', entry)
+            if save_id_match and subject_match and body_match:
+                save_id = save_id_match.group(1)
+                email_subjects[save_id] = subject_match.group(1)
+                email_bodies[save_id] = body_match.group(1)
+    
+    emails = []
+    for save_id, info in guid_mapping.items():
+        if not save_id.startswith("email_"):
+            continue
 
-    # Function to process a single email section
-    def process_email_section(section):
-        # Extract trigger and email_key
-        trigger_match = re.match(r'(.*?)\s*{', section, re.DOTALL)
-        trigger = trigger_match.group(1).strip() if trigger_match else ""
-        # Remove trailing dots from the trigger
-        trigger = re.sub(r'(\s*\.*\s*)$', '', trigger)
+        filename = info['filename']
+        subject = email_subjects.get(save_id, 'unknown')
+        body = email_bodies.get(save_id, 'unknown')
 
-        # Extract the JSON part
-        json_part_match = re.search(r'{(.*?)}', section, re.DOTALL)
-        json_part = json_part_match.group(1).strip() if json_part_match else ""
+        asset_path = os.path.join(input_directory, 'MonoBehaviour', f"{filename}.asset")
+        npc_emailer_guid = None
+        items_to_attach = []
 
-        # Fix the JSON part
-        json_part = json_part.replace('\n', '').replace('\r', '')
+        if os.path.exists(asset_path):
+            with open(asset_path, 'r') as file:
+                asset_data = file.read()
+                npc_emailer_match = re.search(r'npcEmailer:\s*\{fileID: \d+, guid: ([a-f0-9]{32}), type: \d+\}', asset_data)
+                if npc_emailer_match:
+                    npc_emailer_guid = npc_emailer_match.group(1)
+                
+                items_to_attach_match = re.findall(r'itemData:\s*\{fileID: \d+, guid: ([a-f0-9]{32}), type: \d+\}.*?amountOfItem:\s*(\d+)', asset_data, re.DOTALL)
+                for item_guid, amount in items_to_attach_match:
+                    items_to_attach.append(f"{item_guid}*{amount}")
 
-        # Parse the JSON part
-        try:
-            email_data = json.loads(f"{{{json_part}}}")
-        except json.JSONDecodeError:
-            debug_file.write(f"Failed to parse JSON for section: {section}\n")
-            return None
+        npc_name = guid_mapping.get(npc_emailer_guid, {}).get('name', 'unknown')
 
-        email_key = email_data.get('emailKey', '')
-
-        # Extract email body
-        email_body_match = re.search(r'"emailBody":\s*"(.*?)"', section, re.DOTALL)
-        email_body = email_body_match.group(1) if email_body_match else ""
-
-        # Replace placeholders and new lines
-        email_body = email_body.replace('\\n', '<br>').replace('$playerName', '[PLAYER]')
-
-        # Extract NPC name from email body
-        npc_name_match = re.search(r'<br>-(.*?)$', email_body, re.DOTALL)
-        npc_name = npc_name_match.group(1).strip() if npc_name_match else ""
-
-        # Ensure the NPC name is retained at the end of the email body
-        if npc_name:
-            email_body = re.sub(r'<br>-' + re.escape(npc_name) + r'\s*$', '', email_body)  # Remove any existing NPC name
-            email_body = f"{email_body}<br>-{npc_name}"
-
-        # Extract items attached to the email using email_key
-        items = email_assets.get(email_key, [])
-        debug_file.write(f"Email Key: {email_key}, Items: {items}\n")
-        if items:
-            gift_items = []
-            for item_name, amount in items:
-                debug_file.write(f"Item Name: {item_name}, Amount: {amount}\n")
-                if amount == '1':
-                    gift_items.append(item_name)
+        item_names = []
+        for item in items_to_attach:
+            try:
+                item_guid, item_amount = item.split('*')
+                item_name = guid_mapping.get(item_guid, {}).get('name', 'unknown_item')
+                if item_amount == '1':
+                    item_names.append(item_name)
                 else:
-                    gift_items.append(f"{item_name}*{amount}")
-            gift = '; '.join(gift_items)
-        else:
-            gift = ''
+                    item_names.append(f"{item_name}*{item_amount}")
+            except ValueError:
+                debug_file.write(f"Skipping invalid item entry: {item}\n")
+                continue
 
-        # Debugging
-        debug_file.write(f"Processing email_key: {email_key}, trigger: {trigger}, npc: {npc_name}, items: {items}, gift: {gift}\n")
+        gift = '; '.join(item_names)
+        body = body.replace('$playerName', '[PLAYER]').replace('\\n', '<br>')
 
-        # Create the formatted email
-        formatted_email = f"{{{{Mail|collapse=true|trigger={trigger}\n|npc={npc_name}\n|subject={email_data.get('emailSubject', '')}\n|gift={gift}\n|emailBody={email_body} }}}}"
-        return formatted_email
+        email = f"{{{{Mail|collapse=true|trigger={filename.replace('.asset', '')}\n|npc={npc_name}\n|subject={subject}\n|gift={gift}\n|emailBody={body} }}}}"
+        emails.append(email)
 
-    # Process each section and collect formatted emails
-    formatted_emails = [process_email_section(section) for section in email_sections if process_email_section(section)]
-
-    # Join all formatted emails into a single string
-    output_content = "\n\n".join(formatted_emails)
-
-    return output_content
+    return emails
 
 # Define the input and output file paths
-input_file_path = 'Input/Assets/TextAsset/English_Emails.txt'
+input_directory = 'Input/Assets'
+mapping_file_path = 'Output/guid_lookup.txt'
 output_file_path = 'Output/Emails/parsed_emails.txt'
-guid_directory = 'Input/Assets/MonoBehaviour'
 debug_output_path = '.hidden/debug_output/email_debug_output.txt'
 
 # Ensure the output and debug directories exist
@@ -106,20 +135,15 @@ os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
 # Open the debug file for writing
 with open(debug_output_path, 'w') as debug_file:
-    # Load GUID to item mapping
-    guid_to_item, item_type_mapping = load_guid_to_item_mapping(guid_directory, debug_file)
-    debug_file.write(f"GUID to Item Mapping: {guid_to_item}\n")
-
-    # Load email assets
-    email_assets = parse_email_assets(guid_directory, guid_to_item, debug_file)
-    debug_file.write(f"Email Assets Mapping: {email_assets}\n")
-
-    # Parse the emails and get the formatted content
-    parsed_content = parse_emails(input_file_path, guid_to_item, email_assets, debug_file)
-
+    # Load the GUID mapping
+    guid_mapping = load_guid_mapping(mapping_file_path)
+    
+    # Parse the email assets and get the formatted content
+    parsed_emails = parse_email_assets(input_directory, guid_mapping, debug_file)
+    
     # Write the output to a new file
     with open(output_file_path, 'w') as output_file:
-        output_file.write(parsed_content)
+        output_file.write('\n\n'.join(parsed_emails))
 
 print(f"Parsed emails have been written to {output_file_path}")
 print(f"Debug information has been written to {debug_output_path}")
