@@ -55,12 +55,14 @@ def parse_emails(file_path, guid_to_item, email_assets, debug_file):
         # Replace placeholders and new lines
         email_body = email_body.replace('\\n', '<br>').replace('$playerName', '[PLAYER]')
 
-        # Extract NPC name after replacements
+        # Extract NPC name from email body
         npc_name_match = re.search(r'<br>-(.*?)$', email_body, re.DOTALL)
         npc_name = npc_name_match.group(1).strip() if npc_name_match else ""
 
-        # Remove the NPC name from the email body
-        email_body = re.sub(r'<br>-' + re.escape(npc_name), '', email_body)
+        # Ensure the NPC name is retained at the end of the email body
+        if npc_name:
+            email_body = re.sub(r'<br>-' + re.escape(npc_name) + r'\s*$', '', email_body)  # Remove any existing NPC name
+            email_body = f"{email_body}<br>-{npc_name}"
 
         # Extract items attached to the email using email_key
         items = email_assets.get(email_key, [])
