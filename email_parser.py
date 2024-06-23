@@ -64,10 +64,19 @@ def parse_emails(file_path, guid_to_item, email_assets, debug_file):
 
         # Extract items attached to the email using email_key
         items = email_assets.get(email_key, [])
-        gift = '; '.join([f"{item_name}*{amount}" for item_name, amount in items]) if items else ''
+        if items:
+            gift_items = []
+            for item_name, amount in items:
+                if amount == '1':
+                    gift_items.append(item_name)
+                else:
+                    gift_items.append(f"{item_name}*{amount}")
+            gift = '; '.join(gift_items)
+        else:
+            gift = ''
 
         # Debugging
-        debug_file.write(f"Processing email_key: {email_key}, trigger: {trigger}, npc: {npc_name}, items: {items}\n")
+        debug_file.write(f"Processing email_key: {email_key}, trigger: {trigger}, npc: {npc_name}, items: {items}, gift: {gift}\n")
 
         # Create the formatted email
         formatted_email = f"{{{{Mail|collapse=true|trigger={trigger}\n|npc={npc_name}\n|subject={email_data.get('emailSubject', '')}\n|gift={gift}\n|emailBody={email_body} }}}}"
