@@ -66,9 +66,11 @@ def parse_emails(file_path, guid_to_item, email_assets, debug_file):
 
         # Extract items attached to the email using email_key
         items = email_assets.get(email_key, [])
+        debug_file.write(f"Email Key: {email_key}, Items: {items}\n")
         if items:
             gift_items = []
             for item_name, amount in items:
+                debug_file.write(f"Item Name: {item_name}, Amount: {amount}\n")
                 if amount == '1':
                     gift_items.append(item_name)
                 else:
@@ -105,7 +107,7 @@ os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 # Open the debug file for writing
 with open(debug_output_path, 'w') as debug_file:
     # Load GUID to item mapping
-    guid_to_item = load_guid_to_item_mapping(guid_directory, debug_file)
+    guid_to_item, item_type_mapping = load_guid_to_item_mapping(guid_directory, debug_file)
     debug_file.write(f"GUID to Item Mapping: {guid_to_item}\n")
 
     # Load email assets
