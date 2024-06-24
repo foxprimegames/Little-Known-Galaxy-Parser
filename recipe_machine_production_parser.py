@@ -102,7 +102,7 @@ def machine_type_to_name(machine_type):
 input_directory = 'Input/Assets/MonoBehaviour'
 guid_lookup_path = 'Output/guid_lookup.txt'
 debug_output_path = '.hidden/debug_output/machine_recipe_debug_output.txt'
-output_file_path = 'Output/Recipes/parsed_machine_recipes.txt'
+output_file_path = 'Output/Recipes/machine_recipes.txt'
 files_list_path = 'Output/Recipes/files_with_machine_production.txt'
 
 # Ensure the output and debug directories exist

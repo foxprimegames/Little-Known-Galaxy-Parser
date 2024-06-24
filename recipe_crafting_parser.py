@@ -77,7 +77,7 @@ def parse_recipe_assets(input_directory, guid_mapping, debug_file):
 
 # Define the input and output file paths
 input_directory = 'Input/Assets/MonoBehaviour'
-output_file_path = 'Output/Recipes/parsed_crafting_recipes.txt'
+output_file_path = 'Output/Recipes/crafting_recipes.txt'
 guid_directory = 'Input/Assets/MonoBehaviour'
 debug_output_path = '.hidden/debug_output/recipe_debug_output.txt'
 

@@ -126,7 +126,7 @@ def parse_email_assets(input_directory, guid_mapping, debug_file):
 # Define the input and output file paths
 input_directory = 'Input/Assets'
 mapping_file_path = 'Output/guid_lookup.txt'
-output_file_path = 'Output/Emails/parsed_emails.txt'
+output_file_path = 'Output/Emails/all_emails.txt'
 debug_output_path = '.hidden/debug_output/email_debug_output.txt'
 
 # Ensure the output and debug directories exist

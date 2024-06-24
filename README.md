@@ -23,6 +23,11 @@ recipe_machine_production_parser.py --<br>
   Sorts the results by product, in the correct recipies template. <br>
   Puts results in the file folder: Output/Recipes<br>
 
+item_information_parser.py --<br>
+  Looks at assets in `Input/Assets/MonoBehavior`, and creates a mock infobox template of item data.<br>
+  Super versions of the same item are included in the base-item template.<br>
+  Two results are generated - one with sell price, and one where the items can't be sold. This should make it easier to check for changes to sell price. <br>
+
 
 
 # Getting the Assets --
