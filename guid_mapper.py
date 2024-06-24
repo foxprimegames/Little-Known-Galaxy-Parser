@@ -50,7 +50,8 @@ def load_guid_to_item_mapping(directory, debug_file):
                             guid_mapping[guid]['name'] = item_name if item_name else m_name
                             guid_mapping[guid]['category'] = item_category
                             debug_file.write(f"File {filename}: saveID={save_id}, name={guid_mapping[guid]['name']}, category={item_category}\n")
-
+                else:
+                    debug_file.write(f"File {filename}: No saveID found.\n")
     return guid_mapping
 
 # Define the input and output file paths

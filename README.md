@@ -28,7 +28,11 @@ item_information_parser.py --<br>
   Super versions of the same item are included in the base-item template.<br>
   Two results are generated - one with sell price, and one where the items can't be sold. This should make it easier to check for changes to sell price. <br>
 
-
+shop_catalog_parser.py --<br>
+  Looks at assets in `Input/Assets/MonoBehavior`, and creates a list of assets that start with `_StoreCatalog`.<br>
+  It pulls out the `storeSets` information, then looks up all of the `storeItemsInSet` in each storeSet, then looks up the `itemForSale` to get the name of the item and buy price.<br>
+  Formats everything in the shop template.<br>
+  Outputs each shop into a different file in `Output/Shops`<br>
 
 # Getting the Assets --
 1. Download an application that allows you to look at the assets. I use [AssetRipper](https://github.com/AssetRipper/AssetRipper) for parsing and [AssetStudio](https://github.com/Perfare/AssetStudio) for sprites, and looking things up on the fly.
