@@ -3,19 +3,25 @@ Putting these into output files, so we can do a compare between patches, and onl
 
 # Parser Collections --
 dialogue_parser.py -- <br>
-  Looks at a file folder: Input/Assets/TextAsset (should be replaced with each patch)<br>
-  Parses the "English_NPCNAME.txt" files into a format used by the wiki. WIKI: Each region should be a section on the NPC's /Dialogue page. Emotes to text should be associated correctly.<br>
+  Looks at a file folder: `Input/Assets/TextAsset` (should be replaced with each patch)<br>
+  Parses the `English_NPCNAME.txt` files into a format used by the wiki. WIKI: Each region should be a section on the NPC's /Dialogue page. Emotes to text should be associated correctly.<br>
   Puts each file in file folder: Output/Dialogues<br>
 
 email_parser.py -- <br>
-  Looks at a email file in folder: Input/Assets/TextAsset (should be replaced with each patch)<br>
-  Looks at asset files in Input/Assets/MonoBehavior to map email attachments.<br>
+  Looks at a email file in folder: `Input/Assets/TextAsset` (should be replaced with each patch)<br>
+  Looks at asset files in `Input/Assets/MonoBehavior` to map email attachments.<br>
   Puts results in file folder: Output/Emails<br>
 
 recipe_crafting_parser.py --<br>
-  Looks at assets files in Input/Assets/MonoBehavior that start with `crafting_` to get a product, quantity, ingredients, quantity
-  Looks at the product to get category and assigns a machine based on that category.
-  Puts results in file folder: Output/Recipes
+  Looks at assets files in `Input/Assets/MonoBehavior` that start with `crafting_` to get a product, quantity, ingredients, quantity<br>
+  Looks at the product to get category and assigns a machine based on that category.<br>
+  Puts results in file folder: Output/Recipes<br>
+
+recipe_machine_production_parser.py --<br>
+  First generates a file of all assets in `Input/Assets/MonoBehavior` with a "machine production" section in their asset file.<br>
+  Then uses that list to iterate through the .assets of that list and pulls out recipie information. <br>
+  Sorts the results by product, in the correct recipies template. <br>
+  Puts results in the file folder: Output/Recipes<br>
 
 
 
