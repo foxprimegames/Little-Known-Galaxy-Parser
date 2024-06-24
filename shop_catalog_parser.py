@@ -2,11 +2,12 @@ import os
 import re
 import yaml
 import math
+import json
 
 # Define paths
 input_folder = 'Input/Assets/MonoBehaviour'
 output_folder = 'Output/Shops'
-guid_lookup_file = 'Output/guid_lookup.txt'
+guid_lookup_file = 'Output/guid_lookup.json'
 debug_output_file = '.hidden/debug_output/shop_debug_output.txt'
 
 # Ensure output directories exist
@@ -23,16 +24,9 @@ def preprocess_yaml_content(content):
 
 # Function to load GUID to filename and item name mappings
 def load_guid_lookup(guid_lookup_file):
-    guid_mapping = {}
     with open(guid_lookup_file, 'r') as file:
-        for line in file:
-            guid, filename, save_id, name = line.strip().split(',')
-            guid_mapping[guid] = {'filename': filename, 'name': name}
+        guid_mapping = json.load(file)
     return guid_mapping
-
-# Function to convert a string to sentence case
-def to_sentence_case(s):
-    return s.capitalize()
 
 # Load the GUID mappings
 guid_mapping = load_guid_lookup(guid_lookup_file)
@@ -60,26 +54,24 @@ for filename in os.listdir(input_folder):
             store_sets_details = []
             for store_set in store_sets:
                 guid = store_set.get('guid')
-                if guid and guid in guid_mapping:
-                    store_set_filename = guid_mapping[guid]['filename']
-                    store_set_path = os.path.join(input_folder, store_set_filename + '.asset')
-                    if not os.path.exists(store_set_path):
-                        with open(debug_output_file, 'a') as debug_log:
-                            debug_log.write(f"Store set file not found: {store_set_path}\n")
-                        continue
-                    with open(store_set_path, 'r') as store_set_file:
-                        store_set_content = store_set_file.read()
-                        store_set_data = yaml.safe_load(preprocess_yaml_content(store_set_content))
-                        store_set_details = {
-                            'guid': guid,
-                            'filename': store_set_filename,
-                            'rndRollActive': store_set_data.get('MonoBehaviour', {}).get('rndRollActive', False),
-                            'rndRollAmount': store_set_data.get('MonoBehaviour', {}).get('rndRollAmount', 'N/A'),
-                            'storeItemsInSet': store_set_data.get('MonoBehaviour', {}).get('storeItemsInSet', [])
-                        }
-                        store_sets_details.append(store_set_details)
-                        with open(debug_output_file, 'a') as debug_log:
-                            debug_log.write(f"Store set details: {store_set_details}\n")
+                if guid:
+                    store_set_detail = next((entry for entry in guid_mapping if entry['guid'] == guid), None)
+                    if store_set_detail:
+                        store_set_filename = store_set_detail['filename']
+                        store_set_path = os.path.join(input_folder, store_set_filename + '.asset')
+                        if not os.path.exists(store_set_path):
+                            with open(debug_output_file, 'a') as debug_log:
+                                debug_log.write(f"Store set file not found: {store_set_path}\n")
+                            continue
+                        with open(store_set_path, 'r') as store_set_file:
+                            store_set_content = store_set_file.read()
+                            store_set_data = yaml.safe_load(preprocess_yaml_content(store_set_content))
+                            store_set_detail.update({
+                                'rndRollActive': store_set_data.get('MonoBehaviour', {}).get('rndRollActive', False),
+                                'rndRollAmount': store_set_data.get('MonoBehaviour', {}).get('rndRollAmount', 'N/A'),
+                                'storeItemsInSet': store_set_data.get('MonoBehaviour', {}).get('storeItemsInSet', [])
+                            })
+                            store_sets_details.append(store_set_detail)
             
             # Prepare the output
             output_file_path = os.path.join(output_folder, f'{store_name}.txt')
@@ -93,10 +85,9 @@ for filename in os.listdir(input_folder):
                         output_file.write(f"\nStore Set: [{store_set_detail['guid']}] - {store_set_detail['filename']}\n")
                     for item in store_set_detail['storeItemsInSet']:
                         item_guid = item.get('guid', 'unknown')
-                        with open(debug_output_file, 'a') as debug_log:
-                            debug_log.write(f"Processing item GUID: {item_guid}\n")
-                        if item_guid in guid_mapping:
-                            item_filename = guid_mapping[item_guid]['filename']
+                        item_detail = next((entry for entry in guid_mapping if entry['guid'] == item_guid), None)
+                        if item_detail:
+                            item_filename = item_detail['filename']
                             item_path = os.path.join(input_folder, item_filename + '.asset')
                             if not os.path.exists(item_path):
                                 with open(debug_output_file, 'a') as debug_log:
@@ -107,10 +98,9 @@ for filename in os.listdir(input_folder):
                                 item_data = yaml.safe_load(preprocess_yaml_content(item_content))
                                 item_for_sale_guid = item_data.get('MonoBehaviour', {}).get('itemForSale', {}).get('guid', 'unknown')
                                 limited_purchase = item_data.get('MonoBehaviour', {}).get('limitedPurchase', 0)
-                                with open(debug_output_file, 'a') as debug_log:
-                                    debug_log.write(f"Item for sale GUID: {item_for_sale_guid}, Limited purchase: {limited_purchase}\n")
-                                if item_for_sale_guid in guid_mapping:
-                                    item_for_sale_filename = guid_mapping[item_for_sale_guid]['filename']
+                                item_for_sale_detail = next((entry for entry in guid_mapping if entry['guid'] == item_for_sale_guid), None)
+                                if item_for_sale_detail:
+                                    item_for_sale_filename = item_for_sale_detail['filename']
                                     item_for_sale_path = os.path.join(input_folder, item_for_sale_filename + '.asset')
                                     if not os.path.exists(item_for_sale_path):
                                         with open(debug_output_file, 'a') as debug_log:
@@ -120,23 +110,13 @@ for filename in os.listdir(input_folder):
                                         item_for_sale_content = item_for_sale_file.read()
                                         item_for_sale_data = yaml.safe_load(preprocess_yaml_content(item_for_sale_content))
                                         buy_value = float(item_for_sale_data.get('MonoBehaviour', {}).get('buyValue', 0))
-                                        item_name = to_sentence_case(guid_mapping[item_for_sale_guid]['name'])
+                                        item_name = item_for_sale_detail['name'].capitalize()
                                         sell_price = math.ceil(buy_value * markup_percent)
                                         output_line = f"{{{{shop|{item_name}|{sell_price}"
                                         if limited_purchase == 1:
                                             output_line += "|note = limited quantity item. The player can only purchase one."
-                                        output_line += "}}\n"  # Ensure proper closing
+                                        output_line += "}}\n"
                                         output_file.write(output_line)
-                                        with open(debug_output_file, 'a') as debug_log:
-                                            debug_log.write(f"Output line: {output_line}\n")
-                                    with open(debug_output_file, 'a') as debug_log:
-                                        debug_log.write(f"Processed item for sale file: {item_for_sale_filename}, Buy value: {buy_value}, Sell price: {sell_price}\n")
-                                else:
-                                    with open(debug_output_file, 'a') as debug_log:
-                                        debug_log.write(f"Item for sale GUID {item_for_sale_guid} not found in guid_mapping\n")
-                        else:
-                            with open(debug_output_file, 'a') as debug_log:
-                                debug_log.write(f"Item GUID {item_guid} not found in guid_mapping\n")
             
             # Log debugging information
             with open(debug_output_file, 'a') as debug_log:
@@ -150,9 +130,9 @@ for filename in os.listdir(input_folder):
                         debug_log.write(f"\nStore Set: [{store_set_detail['guid']}] - {store_set_detail['filename']}\n")
                     for item in store_set_detail['storeItemsInSet']:
                         item_guid = item.get('guid', 'unknown')
-                        debug_log.write(f"Processed item GUID: {item_guid}\n")
-                        if item_guid in guid_mapping:
-                            item_filename = guid_mapping[item_guid]['filename']
+                        item_detail = next((entry for entry in guid_mapping if entry['guid'] == item_guid), None)
+                        if item_detail:
+                            item_filename = item_detail['filename']
                             item_path = os.path.join(input_folder, item_filename + '.asset')
                             if not os.path.exists(item_path):
                                 debug_log.write(f"Item file not found: {item_path}\n")
@@ -162,9 +142,9 @@ for filename in os.listdir(input_folder):
                                 item_data = yaml.safe_load(preprocess_yaml_content(item_content))
                                 item_for_sale_guid = item_data.get('MonoBehaviour', {}).get('itemForSale', {}).get('guid', 'unknown')
                                 limited_purchase = item_data.get('MonoBehaviour', {}).get('limitedPurchase', 0)
-                                debug_log.write(f"Item for sale GUID: {item_for_sale_guid}, Limited purchase: {limited_purchase}\n")
-                                if item_for_sale_guid in guid_mapping:
-                                    item_for_sale_filename = guid_mapping[item_for_sale_guid]['filename']
+                                item_for_sale_detail = next((entry for entry in guid_mapping if entry['guid'] == item_for_sale_guid), None)
+                                if item_for_sale_detail:
+                                    item_for_sale_filename = item_for_sale_detail['filename']
                                     item_for_sale_path = os.path.join(input_folder, item_for_sale_filename + '.asset')
                                     if not os.path.exists(item_for_sale_path):
                                         debug_log.write(f"Item for sale file not found: {item_for_sale_path}\n")
@@ -173,18 +153,13 @@ for filename in os.listdir(input_folder):
                                         item_for_sale_content = item_for_sale_file.read()
                                         item_for_sale_data = yaml.safe_load(preprocess_yaml_content(item_for_sale_content))
                                         buy_value = float(item_for_sale_data.get('MonoBehaviour', {}).get('buyValue', 0))
-                                        item_name = to_sentence_case(guid_mapping[item_for_sale_guid]['name'])
+                                        item_name = item_for_sale_detail['name'].capitalize()
                                         sell_price = math.ceil(buy_value * markup_percent)
                                         output_line = f"{{{{shop|{item_name}|{sell_price}"
                                         if limited_purchase == 1:
                                             output_line += "|note = limited quantity item. The player can only purchase one."
-                                        output_line += "}}\n"  # Ensure proper closing
-                                        debug_log.write(f"Output line: {output_line}\n")
-                                    debug_log.write(f"Processed item for sale file: {item_for_sale_filename}, Buy value: {buy_value}, Sell price: {sell_price}\n")
-                                else:
-                                    debug_log.write(f"Item for sale GUID {item_for_sale_guid} not found in guid_mapping\n")
-                        else:
-                            debug_log.write(f"Item GUID {item_guid} not found in guid_mapping\n")
+                                        output_line += "}}\n"
+                                        debug_log.write(output_line)
                 debug_log.write("\n")
         
         except yaml.YAMLError as e:
@@ -193,3 +168,6 @@ for filename in os.listdir(input_folder):
         except Exception as e:
             with open(debug_output_file, 'a') as debug_log:
                 debug_log.write(f"Error processing file {filename}: {e}\n")
+
+print(f"Debug information has been written to {debug_output_file}")
+print(f"Parsed shop catalogs have been written to {output_folder}")

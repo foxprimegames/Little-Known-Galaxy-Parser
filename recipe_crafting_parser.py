@@ -1,6 +1,18 @@
 import os
 import re
-from guid_mapper import load_guid_to_item_mapping
+import json
+
+def sentence_case(s):
+    """
+    Converts a string to sentence case.
+
+    Args:
+        s (str): The string to convert.
+
+    Returns:
+        str: The string in sentence case.
+    """
+    return s.capitalize()
 
 def parse_recipe_assets(input_directory, guid_mapping, debug_file):
     """
@@ -8,7 +20,7 @@ def parse_recipe_assets(input_directory, guid_mapping, debug_file):
 
     Args:
         input_directory (str): The path to the directory containing .asset files.
-        guid_mapping (dict): A dictionary mapping GUIDs to item names and other information.
+        guid_mapping (list): A list of dictionaries mapping GUIDs to item names and other information.
         debug_file (file object): The file object to write debug information to.
 
     Returns:
@@ -27,8 +39,8 @@ def parse_recipe_assets(input_directory, guid_mapping, debug_file):
                 product_guid = product_match.group(1) if product_match else ""
 
                 # Extract product item details
-                product_info = guid_mapping.get(product_guid, {})
-                product_name = product_info.get('name', 'unknown_item')
+                product_info = next((entry for entry in guid_mapping if entry['guid'] == product_guid), {})
+                product_name = sentence_case(product_info.get('name', 'unknown_item'))
 
                 # Extract product yield from purchaseBundleAmt
                 yield_match = re.search(r'purchaseBundleAmt:\s*(\d+)', data)
@@ -60,8 +72,8 @@ def parse_recipe_assets(input_directory, guid_mapping, debug_file):
                 if materials:
                     materials_match = re.findall(r'itemData:\s*\{fileID: \d+, guid: ([a-f0-9]{32}), type: \d+\}.*?amountOfItem:\s*(\d+)', materials, re.DOTALL)
                     for material_guid, amount in materials_match:
-                        material_info = guid_mapping.get(material_guid, {})
-                        material_name = material_info.get('name', 'unknown_item')
+                        material_info = next((entry for entry in guid_mapping if entry['guid'] == material_guid), {})
+                        material_name = sentence_case(material_info.get('name', 'unknown_item'))
                         ingredients.append(f"{material_name}*{amount}")
 
                 ingredients_str = '; '.join(ingredients)
@@ -78,17 +90,19 @@ def parse_recipe_assets(input_directory, guid_mapping, debug_file):
 # Define the input and output file paths
 input_directory = 'Input/Assets/MonoBehaviour'
 output_file_path = 'Output/Recipes/crafting_recipes.txt'
-guid_directory = 'Input/Assets/MonoBehaviour'
+guid_lookup_path = 'Output/guid_lookup.json'
 debug_output_path = '.hidden/debug_output/recipe_debug_output.txt'
 
 # Ensure the output and debug directories exist
 os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
+# Load the GUID mapping
+with open(guid_lookup_path, 'r') as file:
+    guid_mapping = json.load(file)
+
 # Open the debug file for writing
 with open(debug_output_path, 'w') as debug_file:
-    # Load GUID to item mapping
-    guid_mapping = load_guid_to_item_mapping(guid_directory, debug_file)
     debug_file.write(f"GUID to Item Mapping: {guid_mapping}\n")
 
     # Parse the recipe assets and get the formatted content

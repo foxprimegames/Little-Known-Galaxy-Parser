@@ -1,13 +1,29 @@
 import os
 import re
+import json
 
-def extract_price_and_restoration_info(directory, sell_output_file_path, no_sell_output_file_path, debug_file_path):
+def load_guid_mapping(mapping_file_path):
+    """
+    Loads the GUID mapping from the specified JSON file.
+
+    Args:
+        mapping_file_path (str): The path to the GUID mapping file.
+
+    Returns:
+        list: A list of dictionaries mapping GUIDs to their corresponding information.
+    """
+    with open(mapping_file_path, 'r') as file:
+        guid_mapping = json.load(file)
+    return guid_mapping
+
+def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file_path, no_sell_output_file_path, debug_file_path):
     """
     Extracts price and restoration information from .asset files in the specified directory,
     combining information for normal, super, radiated, and super radiated versions of items.
 
     Args:
         directory (str): The path to the directory containing .asset files.
+        guid_mapping (list): A list of dictionaries mapping GUIDs to their corresponding information.
         sell_output_file_path (str): The path to the file where the extracted information for sellable items will be written.
         no_sell_output_file_path (str): The path to the file where the extracted information for non-sellable items will be written.
         debug_file_path (str): The path to the file where debug information will be written.
@@ -24,21 +40,16 @@ def extract_price_and_restoration_info(directory, sell_output_file_path, no_sell
 
                 save_id_match = re.search(r'saveID:\s*(\w+)', data)
                 if save_id_match and "item" in save_id_match.group(1):
-                    item_name_match = re.search(r'itemName:\s*(.*)', data)
-                    item_category_match = re.search(r'itemCategory:\s*(.*)', data)
-                    buy_value_match = re.search(r'buyValue:\s*(\d+)', data)
-                    sell_value_match = re.search(r'sellValue:\s*(-?\d+)', data)
-                    health_gain_match = re.search(r'healthGain:\s*(\d+)', data)
-                    energy_gain_match = re.search(r'energyGain:\s*(\d+)', data)
-
-                    item_name = item_name_match.group(1).strip() if item_name_match else "unknown"
-                    item_category = item_category_match.group(1).strip() if item_category_match else "unknown"
+                    save_id = save_id_match.group(1).strip()
+                    item_info = next((entry for entry in guid_mapping if entry.get('save_id') == save_id), {})
+                    item_name = item_info.get('name', 'unknown')
+                    item_category = item_info.get('category', 'unknown')
                     if item_category in ["Craft", "3D schematics"]:
                         continue  # Skip items with itemCategory = Craft or 3D schematics
-                    buy_value = int(buy_value_match.group(1)) if buy_value_match else 0
-                    sell_value = int(sell_value_match.group(1)) if sell_value_match else 0
-                    health_gain = int(health_gain_match.group(1)) if health_gain_match else 0
-                    energy_gain = int(energy_gain_match.group(1)) if energy_gain_match else 0
+                    buy_value = int(re.search(r'buyValue:\s*(\d+)', data).group(1)) if re.search(r'buyValue:\s*(\d+)', data) else 0
+                    sell_value = int(re.search(r'sellValue:\s*(-?\d+)', data).group(1)) if re.search(r'sellValue:\s*(-?\d+)', data) else 0
+                    health_gain = int(re.search(r'healthGain:\s*(\d+)', data).group(1)) if re.search(r'healthGain:\s*(\d+)', data) else 0
+                    energy_gain = int(re.search(r'energyGain:\s*(\d+)', data).group(1)) if re.search(r'energyGain:\s*(\d+)', data) else 0
 
                     base_item_name = re.sub(r'(_super_rad|_super|_rad)$', '', filename.replace('.asset', ''))
 
@@ -159,6 +170,7 @@ def extract_price_and_restoration_info(directory, sell_output_file_path, no_sell
 
 # Define the input and output file paths
 input_directory = 'Input/Assets/MonoBehaviour'
+mapping_file_path = 'Output/guid_lookup.json'
 sell_output_file_path = 'Output/Infobox/infobox.txt'
 no_sell_output_file_path = 'Output/Infobox/infobox_no_sell.txt'
 debug_file_path = '.hidden/debug_output/price_restoration_debug_output.txt'
@@ -168,8 +180,11 @@ os.makedirs(os.path.dirname(sell_output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(no_sell_output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_file_path), exist_ok=True)
 
+# Load the GUID mapping
+guid_mapping = load_guid_mapping(mapping_file_path)
+
 # Extract the price and restoration information
-extract_price_and_restoration_info(input_directory, sell_output_file_path, no_sell_output_file_path, debug_file_path)
+extract_price_and_restoration_info(input_directory, guid_mapping, sell_output_file_path, no_sell_output_file_path, debug_file_path)
 
 print(f"Price and restoration information has been written to {sell_output_file_path} and {no_sell_output_file_path}")
 print(f"Debug information has been written to {debug_file_path}")

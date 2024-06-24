@@ -4,7 +4,7 @@ import json
 
 def load_guid_mapping(mapping_file_path):
     """
-    Loads the GUID mapping from the specified file.
+    Loads the GUID mapping from the specified JSON file.
 
     Args:
         mapping_file_path (str): The path to the GUID mapping file.
@@ -12,22 +12,8 @@ def load_guid_mapping(mapping_file_path):
     Returns:
         dict: A dictionary mapping GUIDs to their corresponding information.
     """
-    guid_mapping = {}
     with open(mapping_file_path, 'r') as file:
-        for line in file:
-            parts = line.strip().split(',')
-            if len(parts) == 4:
-                guid, filename, save_id, name = parts
-                guid_mapping[save_id] = {
-                    'guid': guid,
-                    'filename': filename,
-                    'name': name
-                }
-                guid_mapping[guid] = {
-                    'filename': filename,
-                    'save_id': save_id,
-                    'name': name
-                }
+        guid_mapping = json.load(file)
     return guid_mapping
 
 def load_english_emails(file_path):
@@ -58,6 +44,18 @@ def load_english_emails(file_path):
                 continue
     return emails
 
+def sentence_case(s):
+    """
+    Converts a string to sentence case.
+
+    Args:
+        s (str): The string to convert.
+
+    Returns:
+        str: The string in sentence case.
+    """
+    return s.capitalize()
+
 def parse_email_assets(input_directory, guid_mapping, debug_file):
     email_subjects = {}
     email_bodies = {}
@@ -77,12 +75,13 @@ def parse_email_assets(input_directory, guid_mapping, debug_file):
                 email_bodies[save_id] = body_match.group(1)
     
     emails = []
-    for save_id, info in guid_mapping.items():
-        if not save_id.startswith("email_"):
+    for entry in guid_mapping:
+        if 'save_id' not in entry or not entry['save_id'].startswith("email_"):
             continue
 
-        filename = info['filename']
-        subject = email_subjects.get(save_id, 'unknown')
+        save_id = entry['save_id']
+        filename = entry['filename']
+        subject = sentence_case(email_subjects.get(save_id, 'unknown'))
         body = email_bodies.get(save_id, 'unknown')
 
         asset_path = os.path.join(input_directory, 'MonoBehaviour', f"{filename}.asset")
@@ -100,13 +99,13 @@ def parse_email_assets(input_directory, guid_mapping, debug_file):
                 for item_guid, amount in items_to_attach_match:
                     items_to_attach.append(f"{item_guid}*{amount}")
 
-        npc_name = guid_mapping.get(npc_emailer_guid, {}).get('name', 'unknown')
+        npc_name = sentence_case(next((e['name'] for e in guid_mapping if e['guid'] == npc_emailer_guid), 'unknown'))
 
         item_names = []
         for item in items_to_attach:
             try:
                 item_guid, item_amount = item.split('*')
-                item_name = guid_mapping.get(item_guid, {}).get('name', 'unknown_item')
+                item_name = sentence_case(next((e['name'] for e in guid_mapping if e['guid'] == item_guid), 'unknown_item'))
                 if item_amount == '1':
                     item_names.append(item_name)
                 else:
@@ -125,7 +124,7 @@ def parse_email_assets(input_directory, guid_mapping, debug_file):
 
 # Define the input and output file paths
 input_directory = 'Input/Assets'
-mapping_file_path = 'Output/guid_lookup.txt'
+mapping_file_path = 'Output/guid_lookup.json'
 output_file_path = 'Output/Emails/all_emails.txt'
 debug_output_path = '.hidden/debug_output/email_debug_output.txt'
 
@@ -133,14 +132,16 @@ debug_output_path = '.hidden/debug_output/email_debug_output.txt'
 os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
+# Load the GUID mapping
+guid_mapping = load_guid_mapping(mapping_file_path)
+
 # Open the debug file for writing
 with open(debug_output_path, 'w') as debug_file:
-    # Load the GUID mapping
-    guid_mapping = load_guid_mapping(mapping_file_path)
-    
+    debug_file.write(f"GUID to Item Mapping: {guid_mapping}\n")
+
     # Parse the email assets and get the formatted content
     parsed_emails = parse_email_assets(input_directory, guid_mapping, debug_file)
-    
+
     # Write the output to a new file
     with open(output_file_path, 'w') as output_file:
         output_file.write('\n\n'.join(parsed_emails))
