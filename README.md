@@ -23,6 +23,10 @@ loot_list_parser.py & loot_table_parser.py -- <br>
   loot_table creates an output of loot tables, to be put in the `Data:Loot Tables` page, these do not have nested loot tables within them.<br>
   Each output is formated as it would be needed on the wiki.<br>
 
+npc_gift_overrides_parser.py --<br>
+  Creates a list of npcs, then looks at their .assets for gives they love/like/are neutral twoards/dislike.<br>
+  Puts results in file folder: Output/Gifts<br>
+
 recipe_crafting_parser.py --<br>
   Looks at assets files in `Input/Assets/MonoBehavior` that start with `crafting_` to get a product, quantity, ingredients, quantity<br>
   Looks at the product to get category and assigns a machine based on that category.<br>
