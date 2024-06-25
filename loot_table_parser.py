@@ -23,6 +23,25 @@ def to_sentence_case(text):
     """
     return text.capitalize()
 
+def get_loot_table_name(item_guid, input_directory, guid_mapping):
+    """
+    Get the name of the loot table from its GUID.
+    """
+    item_info = next((item for item in guid_mapping if item['guid'] == item_guid), {})
+    asset_filename = item_info.get('filename', '')
+    if not asset_filename:
+        return 'unknown_loot_table'
+
+    asset_filepath = os.path.join(input_directory, f"{asset_filename}.asset")
+    if not os.path.exists(asset_filepath):
+        return 'unknown_loot_table'
+
+    with open(asset_filepath, 'r') as asset_file:
+        raw_content = asset_file.read()
+        clean_content = preprocess_yaml_content(raw_content)
+        data = yaml.safe_load(clean_content)
+        return data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
+
 def parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, output_file_path, debug_output_path):
     """
     Parse loot tables from asset files and write the formatted loot tables to an output file.
@@ -39,16 +58,17 @@ def parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, outpu
                 data = yaml.safe_load(clean_content)
             
             loot_table_name = data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
-            loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, guid_mapping)
+            loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping)
             
-            header = f"<!-- \n#{loot_table_name} -->\n"
-            output_file.write(header)
-            for item in loot_table_info:
-                output_file.write(item + '\n')
+            if not contains_loot_list:
+                header = f"<!-- \n#{loot_table_name} -->\n"
+                output_file.write(header)
+                for item in loot_table_info:
+                    output_file.write(item + '\n')
             
             debug_log.write(f"Processed loot table: {loot_table_name} in file: {filename}\n")
 
-def extract_loot_table_info(data, loot_table_name, guid_mapping):
+def extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping):
     """
     Extract loot table information from the YAML data.
     """
@@ -58,7 +78,11 @@ def extract_loot_table_info(data, loot_table_name, guid_mapping):
     
     for entry in loot_table_entries:
         loot = entry.get('loot', 0)
-        item_guid = entry.get('itemToDrop', {}).get('guid', '0')
+        if loot == 1:
+            item_guid = entry.get('lootTable', {}).get('guid', '0')
+        else:
+            item_guid = entry.get('itemToDrop', {}).get('guid', '0')
+        
         percent_chance = entry.get('percentChance', 0) / 100.0
         min_num = entry.get('amtToGive', {}).get('minimumNum', 0)
         max_num = entry.get('amtToGive', {}).get('maxiumNum', 0)

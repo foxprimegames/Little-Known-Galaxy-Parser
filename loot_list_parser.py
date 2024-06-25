@@ -44,7 +44,7 @@ def get_loot_table_name(item_guid, input_directory, guid_mapping):
 
 def parse_loot_lists(input_directory, guid_mapping, loot_table_list_path, list_output_file_path, debug_output_path):
     """
-    Parse loot tables from asset files and write the formatted loot tables to an output file.
+    Parse loot lists from asset files and write the formatted loot lists to an output file.
     """
     with open(loot_table_list_path, 'r') as file:
         loot_table_files = file.read().splitlines()
@@ -60,8 +60,8 @@ def parse_loot_lists(input_directory, guid_mapping, loot_table_list_path, list_o
             loot_table_name = data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
             loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping)
             
-            header = f"<!-- \n#{loot_table_name} -->\n"
             if contains_loot_list:
+                header = f"<!-- \n#{loot_table_name} -->\n"
                 list_output_file.write(header)
                 list_output_file.write(f"{{{{TYPE drops|lootlist={loot_table_name}|name=\n")
                 for item in loot_table_info:
@@ -122,7 +122,7 @@ os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 # Load GUID mapping
 guid_mapping = load_guid_mapping(guid_mapping_path)
 
-# Parse loot tables
+# Parse loot lists
 parse_loot_lists(input_directory, guid_mapping, loot_table_list_path, list_output_file_path, debug_output_path)
 
 print(f"Parsed loot lists have been written to {list_output_file_path}")
