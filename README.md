@@ -12,6 +12,17 @@ email_parser.py -- <br>
   Looks at asset files in `Input/Assets/MonoBehavior` to map email attachments.<br>
   Puts results in file folder: Output/Emails<br>
 
+item_information_parser.py --<br>
+  Looks at assets in `Input/Assets/MonoBehavior`, and creates a mock infobox template of item data.<br>
+  Super versions of the same item are included in the base-item template.<br>
+  Two results are generated - one with sell price, and one where the items can't be sold. This should make it easier to check for changes to sell price. <br>
+
+loot_list_parser.py & loot_table_parser.py -- <br>
+  Creates a loot_table_list of assets in `Input/Assets/MonoBehavior` that have a `lootTable`.<br>
+  loot_list creates an output of loot droped from various things, like digging or meteorites. These lists hold both items and loot tables.<br>
+  loot_table creates an output of loot tables, to be put in the `Data:Loot Tables` page, these do not have nested loot tables within them.<br>
+  Each output is formated as it would be needed on the wiki.<br>
+
 recipe_crafting_parser.py --<br>
   Looks at assets files in `Input/Assets/MonoBehavior` that start with `crafting_` to get a product, quantity, ingredients, quantity<br>
   Looks at the product to get category and assigns a machine based on that category.<br>
@@ -22,11 +33,6 @@ recipe_machine_production_parser.py --<br>
   Then uses that list to iterate through the .assets of that list and pulls out recipie information. <br>
   Sorts the results by product, in the correct recipies template. <br>
   Puts results in the file folder: Output/Recipes<br>
-
-item_information_parser.py --<br>
-  Looks at assets in `Input/Assets/MonoBehavior`, and creates a mock infobox template of item data.<br>
-  Super versions of the same item are included in the base-item template.<br>
-  Two results are generated - one with sell price, and one where the items can't be sold. This should make it easier to check for changes to sell price. <br>
 
 shop_catalog_parser.py --<br>
   Looks at assets in `Input/Assets/MonoBehavior`, and creates a list of assets that start with `_StoreCatalog`.<br>
