@@ -12,10 +12,10 @@ email_parser.py -- <br>
   Looks at asset files in `Input/Assets/MonoBehavior` to map email attachments.<br>
   Puts results in file folder: Output/Emails<br>
 
-item_information_parser.py --<br>
+infobox_item_parser.py & infobox_seed_parser.py --<br>
   Looks at assets in `Input/Assets/MonoBehavior`, and creates a mock infobox template of item data.<br>
   Super versions of the same item are included in the base-item template.<br>
-  Two results are generated - one with sell price, and one where the items can't be sold. This should make it easier to check for changes to sell price. <br>
+  Three results are generated - one of just seeds, one of everything with sell price (minus seeds), and one where the items can't be sold. This should make it easier to check for changes to sell price. <br>
 
 loot_list_parser.py & loot_table_parser.py -- <br>
   Creates a loot_table_list of assets in `Input/Assets/MonoBehavior` that have a `lootTable`.<br>

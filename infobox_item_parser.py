@@ -16,6 +16,40 @@ def load_guid_mapping(mapping_file_path):
         guid_mapping = json.load(file)
     return guid_mapping
 
+def adjust_categories(item_name, item_category, sub_category, item_type):
+    """
+    Adjusts the item category and sub category based on specific rules.
+
+    Args:
+        item_name (str): The name of the item.
+        item_category (str): The current item category.
+        sub_category (str): The current sub category.
+        item_type (int): The item type.
+
+    Returns:
+        tuple: The adjusted item category and sub category.
+    """
+    clothing_categories = ["Accessory", "Hair", "Hat", "Pants", "Shirt", "Helmet"]
+    character_customization_categories = ["Hair Color", "Hair Style", "Facial Hair Color"]
+    decoration_categories = ["Wall Texture", "Floor Texture"]
+
+    if item_type == 4:
+        return item_category, "Crops"
+    elif item_type == 7:
+        return item_category, "Forged"
+    elif item_category in clothing_categories:
+        return "Clothing", item_category
+    elif item_category in character_customization_categories:
+        return "Character Customization", item_category
+    elif item_category in decoration_categories:
+        return "Decoration", item_category
+    elif item_category == "Resource Block":
+        return "Resource", "Block"
+    elif "ore" in item_name.lower():
+        return "Resource", "Ore"
+    else:
+        return item_category, sub_category if sub_category else ""
+
 def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file_path, no_sell_output_file_path, debug_file_path):
     """
     Extracts price and restoration information from .asset files in the specified directory,
@@ -44,8 +78,12 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
                     item_info = next((entry for entry in guid_mapping if entry.get('save_id') == save_id), {})
                     item_name = item_info.get('name', 'unknown')
                     item_category = item_info.get('category', 'unknown')
-                    if item_category in ["Craft", "3D schematics"]:
-                        continue  # Skip items with itemCategory = Craft or 3D schematics
+                    if item_category in ["Craft", "3D schematics", "Seeds", "Tree Seeds"]:
+                        continue  # Skip items with itemCategory = Craft, 3D schematics, Seeds, or Tree Seeds
+
+                    item_type = int(re.search(r'itemType:\s*(\d+)', data).group(1)) if re.search(r'itemType:\s*(\d+)', data) else 0
+                    item_category, sub_category = adjust_categories(item_name, item_category, "", item_type)
+
                     buy_value = int(re.search(r'buyValue:\s*(\d+)', data).group(1)) if re.search(r'buyValue:\s*(\d+)', data) else 0
                     sell_value = int(re.search(r'sellValue:\s*(-?\d+)', data).group(1)) if re.search(r'sellValue:\s*(-?\d+)', data) else 0
                     health_gain = int(re.search(r'healthGain:\s*(\d+)', data).group(1)) if re.search(r'healthGain:\s*(\d+)', data) else 0
@@ -76,7 +114,9 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
                     elif '_rad' in filename:
                         extracted_info[base_item_name]["radiated"] = {
                             "item_name": item_name,
-                            "item_type": item_category,
+                            "item_category": item_category,
+                            "sub_category": sub_category,
+                            "item_type": item_type,
                             "sell_value": sell_value,
                             "health_gain": health_gain,
                             "energy_gain": energy_gain
@@ -84,7 +124,9 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
                     else:
                         extracted_info[base_item_name]["normal"] = {
                             "item_name": item_name,
-                            "item_type": item_category,
+                            "item_category": item_category,
+                            "sub_category": sub_category,
+                            "item_type": item_type,
                             "buy_value": buy_value,
                             "sell_value": sell_value,
                             "health_gain": health_gain,
@@ -101,7 +143,9 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
             normal = info.get("normal", {})
             super_info = info.get("super", {})
             item_name = normal.get("item_name", "unknown_item")
-            item_type = normal.get("item_type", "unknown")
+            item_category = normal.get("item_category", "unknown")
+            sub_category = normal.get("sub_category", "")
+            item_type = normal.get("item_type", 0)
             sell_value = normal.get("sell_value", 0)
             health_gain = normal.get("health_gain", 0)
             energy_gain = normal.get("energy_gain", 0)
@@ -109,34 +153,46 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
             health_gain_s = super_info.get("health_gain", 0)
             energy_gain_s = super_info.get("energy_gain", 0)
 
-            if item_type in ['Accessory', 'Hair', 'Hat', 'Pants', 'Shirt']:
-                item_type_str = f"|itemType    = Clothing\n|subType     = {item_type}"
-            else:
-                item_type_str = f"|itemType    = {item_type}"
-
-            output_file = no_sell_output_file if sell_value == -1 else sell_output_file
-
-            output_file.write(f"# {item_name}\n")
-            output_file.write("{{infobox\n")
             if sell_value == -1:
-                output_file.write("|sellValue   = <!-- this item cannot be sold, leave blank -->\n")
+                output_file = no_sell_output_file
+                sell_value_str = "|sellValue   = <!-- this item cannot be sold, leave blank -->\n"
             else:
-                output_file.write(f"|sellValue   = {sell_value}\n")
-            if sell_super:
-                output_file.write(f"|sellSuper   = {sell_super}\n")
-            output_file.write(f"{item_type_str}\n")
-            output_file.write(f"|energyGain  = {energy_gain}\n")
-            output_file.write(f"|healthGain  = {health_gain}\n")
-            if energy_gain_s or health_gain_s:
-                output_file.write(f"|energyGainS = {energy_gain_s}\n")
-                output_file.write(f"|healthGainS = {health_gain_s}\n")
-            output_file.write("}}\n\n")
+                output_file = sell_output_file
+                sell_value_str = f"|sellValue   = {sell_value}\n"
+
+            if item_category != "Seeds":
+                output_file.write(f"# {item_name}\n")
+                output_file.write("{{infobox\n")
+                output_file.write(sell_value_str)
+                if sell_super:
+                    output_file.write(f"|sellSuper   = {sell_super}\n")
+                output_file.write(f"|itemCategory = {item_category}\n")
+                output_file.write(f"|subCategory = {sub_category}\n")
+                output_file.write(f"|itemType = {item_type}\n")
+
+                restoration_info = ""
+                if energy_gain:
+                    restoration_info += f"|energyGain  = {energy_gain}\n"
+                if health_gain:
+                    restoration_info += f"|healthGain  = {health_gain}\n"
+                if energy_gain_s:
+                    restoration_info += f"|energyGainS = {energy_gain_s}\n"
+                if health_gain_s:
+                    restoration_info += f"|healthGainS = {health_gain_s}\n"
+                
+                if restoration_info:
+                    output_file.write("<!-- Restoration information -->\n")
+                    output_file.write(restoration_info)
+
+                output_file.write("}}\n\n")
 
             # Radiated and Super Radiated versions
             radiated = info.get("radiated", {})
             super_radiated = info.get("super_radiated", {})
             item_name_rad = radiated.get("item_name", "unknown_item")
-            item_type_rad = radiated.get("item_type", "unknown")
+            item_category_rad = radiated.get("item_category", "unknown")
+            sub_category_rad = radiated.get("sub_category", "")
+            item_type_rad = radiated.get("item_type", 0)
             sell_value_rad = radiated.get("sell_value", 0)
             health_gain_rad = radiated.get("health_gain", 0)
             energy_gain_rad = radiated.get("energy_gain", 0)
@@ -144,28 +200,37 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
             health_gain_sr = super_radiated.get("health_gain", 0)
             energy_gain_sr = super_radiated.get("energy_gain", 0)
 
-            if item_type_rad in ['Accessory', 'Hair', 'Hat', 'Pants', 'Shirt']:
-                item_type_rad_str = f"|itemType    = Clothing\n|subType     = {item_type_rad}"
-            else:
-                item_type_rad_str = f"|itemType    = {item_type_rad}"
-
-            if radiated:
-                output_file = no_sell_output_file if sell_value_rad == -1 else sell_output_file
-
-                output_file.write(f"# {item_name_rad}\n")
-                output_file.write("{{infobox\n")
+            if radiated and item_category_rad != "Seeds":
                 if sell_value_rad == -1:
+                    output_file = no_sell_output_file
+                    output_file.write(f"# {item_name_rad}\n")
+                    output_file.write("{{infobox\n")
                     output_file.write("|sellValue   = <!-- this item cannot be sold, leave blank -->\n")
                 else:
+                    output_file = sell_output_file
+                    output_file.write(f"# {item_name_rad}\n")
+                    output_file.write("{{infobox\n")
                     output_file.write(f"|sellValue   = {sell_value_rad}\n")
                 if sell_super_rad:
                     output_file.write(f"|sellSuper   = {sell_super_rad}\n")
-                output_file.write(f"{item_type_rad_str}\n")
-                output_file.write(f"|energyGain  = {energy_gain_rad}\n")
-                output_file.write(f"|healthGain  = {health_gain_rad}\n")
-                if energy_gain_sr or health_gain_sr:
-                    output_file.write(f"|energyGainS = {energy_gain_sr}\n")
-                    output_file.write(f"|healthGainS = {health_gain_sr}\n")
+                output_file.write(f"|itemCategory = {item_category_rad}\n")
+                output_file.write(f"|subCategory = {sub_category_rad}\n")
+                output_file.write(f"|itemType = {item_type_rad}\n")
+
+                restoration_info = ""
+                if energy_gain_rad:
+                    restoration_info += f"|energyGain  = {energy_gain_rad}\n"
+                if health_gain_rad:
+                    restoration_info += f"|healthGain  = {health_gain_rad}\n"
+                if energy_gain_sr:
+                    restoration_info += f"|energyGainS = {energy_gain_sr}\n"
+                if health_gain_sr:
+                    restoration_info += f"|healthGainS = {health_gain_sr}\n"
+
+                if restoration_info:
+                    output_file.write("<!-- Restoration information -->\n")
+                    output_file.write(restoration_info)
+
                 output_file.write("}}\n\n")
 
 # Define the input and output file paths
