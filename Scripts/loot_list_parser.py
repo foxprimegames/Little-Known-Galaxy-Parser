@@ -61,14 +61,12 @@ def parse_loot_lists(input_directory, guid_mapping, loot_table_list_path, list_o
             loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping)
             
             if contains_loot_list:
-                header = f"<!-- \n#{loot_table_name} -->\n"
-                list_output_file.write(header)
                 list_output_file.write(f"{{{{TYPE drops|lootlist={loot_table_name}|name=\n")
                 for item in loot_table_info:
                     list_output_file.write(item + '\n')
                 list_output_file.write("}}\n")
             
-            debug_log.write(f"Processed loot table: {loot_table_name} in file: {filename}\n")
+            debug_log.write(f"Processed loot list: {loot_table_name} in file: {filename}\n")
 
 def extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping):
     """
@@ -82,21 +80,16 @@ def extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping
     
     for entry in loot_table_entries:
         loot = entry.get('loot', 0)
-        if loot == 1:
-            item_guid = entry.get('lootTable', {}).get('guid', '0')
-        else:
-            item_guid = entry.get('itemToDrop', {}).get('guid', '0')
-        
+        item_guid = entry.get('itemToDrop', {}).get('guid', '0')
         percent_chance = entry.get('percentChance', 0) / 100.0
         min_num = entry.get('amtToGive', {}).get('minimumNum', 0)
         max_num = entry.get('amtToGive', {}).get('maxiumNum', 0)
         
         if loot == 0 and item_guid == '0':
-            item_name = "Nothing"
             loot_table_info.append(f"|item{item_count}=Nothing\n   |item{item_count}chance={percent_chance:.2f}\n   |item{item_count}min={min_num}\n   |item{item_count}max={max_num}")
             item_count += 1
         elif loot == 1:
-            nested_loot_table_name = get_loot_table_name(item_guid, input_directory, guid_mapping)
+            nested_loot_table_name = get_loot_table_name(entry['lootTable']['guid'], input_directory, guid_mapping)
             loot_table_info.append(f"|table{table_count}={nested_loot_table_name}\n   |table{table_count}chance={percent_chance:.2f}\n   |table{table_count}min={min_num}\n   |table{table_count}max={max_num}")
             table_count += 1
             contains_loot_list = True
