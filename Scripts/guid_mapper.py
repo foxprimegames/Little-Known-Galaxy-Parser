@@ -2,14 +2,15 @@ import os
 import re
 import json
 
-def load_guid_to_item_mapping(directory, english_items_file, debug_file):
+def load_guid_to_item_mapping(directory, english_items_file, english_quests_file, debug_file):
     """
-    Loads the GUID to item mapping from .meta files in the specified directory
+    Loads the GUID to item and quest mapping from .meta files in the specified directory
     and extracts item names or m_Name from the corresponding asset files.
 
     Args:
         directory (str): The path to the directory containing .meta and .asset files.
         english_items_file (str): The path to the English_Items.txt file.
+        english_quests_file (str): The path to the English_Quests.txt file.
         debug_file (file object): The file object to write debug information to.
 
     Returns:
@@ -24,6 +25,14 @@ def load_guid_to_item_mapping(directory, english_items_file, debug_file):
         matches = re.findall(r'"itemKey": "(.*?)",\s*"itemName": "(.*?)"', content)
         for itemKey, itemName in matches:
             item_mapping[itemKey] = itemName
+
+    # Load questKey to questName mappings from English_Quests.txt
+    quest_mapping = {}
+    with open(english_quests_file, 'r') as file:
+        content = file.read()
+        matches = re.findall(r'"questKey": "(quest_\d+)",\s*"questName": "(.*?)"', content)
+        for questKey, questName in matches:
+            quest_mapping[questKey] = questName
 
     # First, map GUIDs to file names
     for filename in os.listdir(directory):
@@ -60,6 +69,8 @@ def load_guid_to_item_mapping(directory, english_items_file, debug_file):
                             mapped_name = m_name
                         else:
                             mapped_name = mapped_name
+                    elif save_id.startswith("quest_"):
+                        mapped_name = quest_mapping.get(save_id, "").strip()
                     else:
                         mapped_name = item_name if item_name else m_name
 
@@ -76,6 +87,7 @@ def load_guid_to_item_mapping(directory, english_items_file, debug_file):
 # Define the input and output file paths
 input_directory = 'Input/Assets/MonoBehaviour'
 english_items_file = 'Input/Assets/TextAsset/English_Items.txt'
+english_quests_file = 'Input/Assets/TextAsset/English_Quests.txt'
 output_file_path = 'Output/guid_lookup.json'
 debug_output_path = '.hidden/debug_output/guid_debug_output.txt'
 
@@ -85,7 +97,7 @@ os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
 # Open the debug file for writing
 with open(debug_output_path, 'w') as debug_file:
-    guid_mapping = load_guid_to_item_mapping(input_directory, english_items_file, debug_file)
+    guid_mapping = load_guid_to_item_mapping(input_directory, english_items_file, english_quests_file, debug_file)
     with open(output_file_path, 'w') as output_file:
         json.dump(guid_mapping, output_file, indent=2)
     print(f"GUID mapping has been written to {output_file_path}")

@@ -27,6 +27,10 @@ npc_gift_overrides_parser.py --<br>
   Creates a list of npcs, then looks at their .assets for gives they love/like/are neutral twoards/dislike.<br>
   Puts results in file folder: Output/Gifts<br>
 
+npc_gifts_to_player_parser.py --<br>
+  Creates a list of items the npcs give to the player, both from friendship emails and dialogues after starting missions.<br>
+  Puts results in the file folder: Output/Gifts<br>
+
 recipe_crafting_parser.py --<br>
   Looks at assets files in `Input/Assets/MonoBehavior` that start with `crafting_` to get a product, quantity, ingredients, quantity<br>
   Looks at the product to get category and assigns a machine based on that category.<br>
