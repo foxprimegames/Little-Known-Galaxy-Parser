@@ -3,6 +3,7 @@ import os
 
 # List of scripts to execute (relative paths using raw strings or forward slashes)
 scripts = [
+    r"Scripts\item_description_parser.py",
     r"Scripts\guid_mapper.py",
     r"Scripts\dialogue_parser.py",
     r"Scripts\email_parser.py",

@@ -2,6 +2,9 @@ Collection of Parser Items for the Little-Known Galaxy wiki found at: https://lk
 Putting these into output files, so we can do a compare between patches, and only update pages that need it.
 
 # Parser Collections --
+item_description_parser.py --<br>
+  Creates a lua file that can be dropped directly into `https://lkg.wiki.gg/wiki/Module:Description/data` to update all of the descriptions of all of the items, and it will update the infobox.
+  
 dialogue_parser.py -- <br>
   Looks at a file folder: `Input/Assets/TextAsset` (should be replaced with each patch)<br>
   Parses the `English_NPCNAME.txt` files into a format used by the wiki. WIKI: Each region should be a section on the NPC's /Dialogue page. Emotes to text should be associated correctly.<br>
