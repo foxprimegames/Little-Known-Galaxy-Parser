@@ -3,32 +3,11 @@ import re
 import json
 
 def load_guid_mapping(mapping_file_path):
-    """
-    Loads the GUID mapping from the specified JSON file.
-
-    Args:
-        mapping_file_path (str): The path to the GUID mapping file.
-
-    Returns:
-        list: A list of dictionaries mapping GUIDs to their corresponding information.
-    """
     with open(mapping_file_path, 'r') as file:
         guid_mapping = json.load(file)
     return guid_mapping
 
 def adjust_categories(item_name, item_category, sub_category, item_type):
-    """
-    Adjusts the item category and sub category based on specific rules.
-
-    Args:
-        item_name (str): The name of the item.
-        item_category (str): The current item category.
-        sub_category (str): The current sub category.
-        item_type (int): The item type.
-
-    Returns:
-        tuple: The adjusted item category and sub category.
-    """
     clothing_categories = ["Accessory", "Hair", "Hat", "Pants", "Shirt", "Helmet"]
     character_customization_categories = ["Hair Color", "Hair Style", "Facial Hair Color"]
     decoration_categories = ["Wall Texture", "Floor Texture"]
@@ -50,82 +29,84 @@ def adjust_categories(item_name, item_category, sub_category, item_type):
     else:
         return item_category, sub_category if sub_category else ""
 
+def get_subcategory_text(deco_type):
+    deco_type_mapping = {
+        '1': 'Chair', '7': 'Chair',
+        '2': 'Wall Art',
+        '3': 'Bench',
+        '4': 'Block',
+        '5': 'Storage', '14': 'Storage',
+        '6': 'Rug',
+        '8': 'Couch',
+        '9': 'Miscellaneous', '10': 'Miscellaneous',
+        '11': 'Pathway',
+        '12': 'Lighting', '13': 'Lighting',
+        '15': 'Plant', '24': 'Plant',
+        '17': 'Table', '19': 'Table', '20': 'Table',
+        '18': 'End Table',
+        '21': 'Wardrobe',
+        '22': 'Window',
+        '16': 'Stool'
+    }
+    return deco_type_mapping.get(deco_type, '')
+
 def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file_path, no_sell_output_file_path, debug_file_path):
-    """
-    Extracts price and restoration information from .asset files in the specified directory,
-    combining information for normal, super, radiated, and super radiated versions of items.
-
-    Args:
-        directory (str): The path to the directory containing .asset files.
-        guid_mapping (list): A list of dictionaries mapping GUIDs to their corresponding information.
-        sell_output_file_path (str): The path to the file where the extracted information for sellable items will be written.
-        no_sell_output_file_path (str): The path to the file where the extracted information for non-sellable items will be written.
-        debug_file_path (str): The path to the file where debug information will be written.
-
-    Returns:
-        None
-    """
     extracted_info = {}
 
-    for filename in os.listdir(directory):
-        if filename.endswith(".asset"):
-            with open(os.path.join(directory, filename), 'r') as file:
-                data = file.read()
+    with open(debug_file_path, 'w') as debug_file:
+        for filename in os.listdir(directory):
+            if filename.endswith(".asset"):
+                with open(os.path.join(directory, filename), 'r') as file:
+                    data = file.read()
 
-                save_id_match = re.search(r'saveID:\s*(\w+)', data)
-                if save_id_match and "item" in save_id_match.group(1):
-                    save_id = save_id_match.group(1).strip()
-                    item_info = next((entry for entry in guid_mapping if entry.get('save_id') == save_id), {})
-                    item_name = item_info.get('name', 'unknown')
-                    item_category = item_info.get('category', 'unknown')
-                    if item_category in ["Craft", "3D schematics", "Seeds", "Tree Seeds"]:
-                        continue  # Skip items with itemCategory = Craft, 3D schematics, Seeds, or Tree Seeds
+                    save_id_match = re.search(r'saveID:\s*(\w+)', data)
+                    if save_id_match and "item" in save_id_match.group(1):
+                        save_id = save_id_match.group(1).strip()
+                        item_info = next((entry for entry in guid_mapping if entry.get('save_id') == save_id), {})
+                        item_name = item_info.get('name', 'unknown')
+                        item_category = item_info.get('category', 'unknown')
+                        if item_category in ["Craft", "3D schematics", "Seeds", "Tree Seeds"]:
+                            continue  # Skip items with itemCategory = Craft, 3D schematics, Seeds, or Tree Seeds
 
-                    item_type = int(re.search(r'itemType:\s*(\d+)', data).group(1)) if re.search(r'itemType:\s*(\d+)', data) else 0
-                    item_category, sub_category = adjust_categories(item_name, item_category, "", item_type)
+                        item_type = int(re.search(r'itemType:\s*(\d+)', data).group(1)) if re.search(r'itemType:\s*(\d+)', data) else 0
+                        
+                        sub_category = ""
+                        deco_type = ""
+                        if item_type == 6:
+                            deco_type_match = re.search(r'decoType:\s*(\d+)', data)
+                            if deco_type_match:
+                                deco_type = deco_type_match.group(1)
+                                sub_category = get_subcategory_text(deco_type)
+                                debug_file.write(f"DecoType found for {item_name} ({filename}): {deco_type} -> {sub_category}\n")
+                            else:
+                                debug_file.write(f"DecoType not found for {item_name} ({filename})\n")
+                        else:
+                            deco_type_match = re.search(r'decoType:\s*(\d+)', data)
+                            if deco_type_match:
+                                deco_type = deco_type_match.group(1)
 
-                    buy_value = int(re.search(r'buyValue:\s*(\d+)', data).group(1)) if re.search(r'buyValue:\s*(\d+)', data) else 0
-                    sell_value = int(re.search(r'sellValue:\s*(-?\d+)', data).group(1)) if re.search(r'sellValue:\s*(-?\d+)', data) else 0
-                    health_gain = int(re.search(r'healthGain:\s*(\d+)', data).group(1)) if re.search(r'healthGain:\s*(\d+)', data) else 0
-                    energy_gain = int(re.search(r'energyGain:\s*(\d+)', data).group(1)) if re.search(r'energyGain:\s*(\d+)', data) else 0
+                        item_category, sub_category = adjust_categories(item_name, item_category, sub_category, item_type)
 
-                    base_item_name = re.sub(r'(_super_rad|_super|_rad)$', '', filename.replace('.asset', ''))
+                        buy_value = int(re.search(r'buyValue:\s*(\d+)', data).group(1)) if re.search(r'buyValue:\s*(\d+)', data) else 0
+                        sell_value = int(re.search(r'sellValue:\s*(-?\d+)', data).group(1)) if re.search(r'sellValue:\s*(-?\d+)', data) else 0
+                        health_gain = int(re.search(r'healthGain:\s*(\d+)', data).group(1)) if re.search(r'healthGain:\s*(\d+)', data) else 0
+                        energy_gain = int(re.search(r'energyGain:\s*(\d+)', data).group(1)) if re.search(r'energyGain:\s*(\d+)', data) else 0
 
-                    if base_item_name not in extracted_info:
-                        extracted_info[base_item_name] = {
-                            "normal": {},
-                            "super": {},
-                            "radiated": {},
-                            "super_radiated": {}
-                        }
+                        base_item_name = re.sub(r'(_super_rad|_super|_rad)$', '', filename.replace('.asset', ''))
 
-                    if '_super_rad' in filename:
-                        extracted_info[base_item_name]["super_radiated"] = {
-                            "sell_value": sell_value,
-                            "health_gain": health_gain,
-                            "energy_gain": energy_gain
-                        }
-                    elif '_super' in filename:
-                        extracted_info[base_item_name]["super"] = {
-                            "sell_value": sell_value,
-                            "health_gain": health_gain,
-                            "energy_gain": energy_gain
-                        }
-                    elif '_rad' in filename:
-                        extracted_info[base_item_name]["radiated"] = {
+                        if base_item_name not in extracted_info:
+                            extracted_info[base_item_name] = {
+                                "normal": {},
+                                "super": {},
+                                "radiated": {},
+                                "super_radiated": {}
+                            }
+
+                        normal_info = {
                             "item_name": item_name,
                             "item_category": item_category,
                             "sub_category": sub_category,
-                            "item_type": item_type,
-                            "sell_value": sell_value,
-                            "health_gain": health_gain,
-                            "energy_gain": energy_gain
-                        }
-                    else:
-                        extracted_info[base_item_name]["normal"] = {
-                            "item_name": item_name,
-                            "item_category": item_category,
-                            "sub_category": sub_category,
+                            "deco_type": deco_type,
                             "item_type": item_type,
                             "buy_value": buy_value,
                             "sell_value": sell_value,
@@ -133,7 +114,23 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
                             "energy_gain": energy_gain
                         }
 
-    with open(debug_file_path, 'w') as debug_file:
+                        if '_super_rad' in filename:
+                            extracted_info[base_item_name]["super_radiated"] = {
+                                "sell_value": sell_value,
+                                "health_gain": health_gain,
+                                "energy_gain": energy_gain
+                            }
+                        elif '_super' in filename:
+                            extracted_info[base_item_name]["super"] = {
+                                "sell_value": sell_value,
+                                "health_gain": health_gain,
+                                "energy_gain": energy_gain
+                            }
+                        elif '_rad' in filename:
+                            extracted_info[base_item_name]["radiated"] = normal_info
+                        else:
+                            extracted_info[base_item_name]["normal"] = normal_info
+
         for item, info in sorted(extracted_info.items(), key=lambda x: x[1]["normal"].get("item_name", "unknown_item")):
             debug_file.write(f"Extracted for {item}: {info}\n")
 
@@ -146,6 +143,7 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
             item_category = normal.get("item_category", "unknown")
             sub_category = normal.get("sub_category", "")
             item_type = normal.get("item_type", 0)
+            deco_type = normal.get("deco_type", "")
             sell_value = normal.get("sell_value", 0)
             health_gain = normal.get("health_gain", 0)
             energy_gain = normal.get("energy_gain", 0)
@@ -167,7 +165,10 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
                 if sell_super:
                     output_file.write(f"|sellSuper   = {sell_super}\n")
                 output_file.write(f"|itemCategory = {item_category}\n")
-                output_file.write(f"|subCategory = {sub_category}\n")
+                if item_type == 6 and deco_type:
+                    output_file.write(f"|subCategory = {sub_category}\n")
+                else:
+                    output_file.write(f"|subCategory = {sub_category}\n")
                 output_file.write(f"|itemType = {item_type}\n")
 
                 restoration_info = ""
@@ -193,6 +194,7 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
             item_category_rad = radiated.get("item_category", "unknown")
             sub_category_rad = radiated.get("sub_category", "")
             item_type_rad = radiated.get("item_type", 0)
+            deco_type_rad = radiated.get("deco_type", "")
             sell_value_rad = radiated.get("sell_value", 0)
             health_gain_rad = radiated.get("health_gain", 0)
             energy_gain_rad = radiated.get("energy_gain", 0)
@@ -214,7 +216,10 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
                 if sell_super_rad:
                     output_file.write(f"|sellSuper   = {sell_super_rad}\n")
                 output_file.write(f"|itemCategory = {item_category_rad}\n")
-                output_file.write(f"|subCategory = {sub_category_rad}\n")
+                if item_type_rad == 6 and deco_type_rad:
+                    output_file.write(f"|subCategory = {sub_category_rad}\n")
+                else:
+                    output_file.write(f"|subCategory = {sub_category_rad}\n")
                 output_file.write(f"|itemType = {item_type_rad}\n")
 
                 restoration_info = ""
