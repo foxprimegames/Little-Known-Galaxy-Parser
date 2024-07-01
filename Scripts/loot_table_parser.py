@@ -1,3 +1,10 @@
+"""
+##Script Summary:
+This script parses loot tables from asset files and writes the formatted loot tables to various 
+    output files based on specific naming criteria.
+    Loot tables are defined as only have singular items nested within them, not other loot tables.
+"""
+
 import os
 import re
 import yaml
@@ -23,54 +30,6 @@ def to_sentence_case(text):
     """
     return text.capitalize()
 
-def split_loot_tables_by_criteria(loot_table_name):
-    """
-    Determine the output file based on the loot table name.
-    """
-    if loot_table_name.startswith("Enemy_"):
-        return "Output/Drops/enemy_loot_table.txt"
-    elif "stone" in loot_table_name.lower():
-        return "Output/Drops/stone_loot_table.txt"
-    elif "microbe" in loot_table_name.lower():
-        return "Output/Drops/microbe_loot_table.txt"
-    elif "grass" in loot_table_name.lower() or "mixedseeds" in loot_table_name.lower():
-        return "Output/Drops/grass_loot_table.txt"
-    elif "ship" in loot_table_name.lower():
-        return "Output/Drops/ship_loot_table.txt"
-    elif "discoveritems" in loot_table_name.lower():
-        return "Output/Drops/discovery_loot_table.txt"
-    elif "friendcard" in loot_table_name.lower():
-        return "Output/Drops/friend_card_loot_table.txt"
-    else:
-        return "Output/Drops/other_loot_table.txt"
-
-def parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, debug_output_path):
-    """
-    Parse loot tables from asset files and write the formatted loot tables to output files based on criteria.
-    """
-    with open(loot_table_list_path, 'r') as file:
-        loot_table_files = file.read().splitlines()
-
-    with open(debug_output_path, 'w') as debug_log:
-        for filename in loot_table_files:
-            filepath = os.path.join(input_directory, filename)
-            with open(filepath, 'r') as file:
-                raw_content = file.read()
-                clean_content = preprocess_yaml_content(raw_content)
-                data = yaml.safe_load(clean_content)
-
-            loot_table_name = data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
-            loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, guid_mapping)
-            
-            output_file_path = split_loot_tables_by_criteria(loot_table_name)
-            with open(output_file_path, 'a') as output_file:
-                header = f"<!-- \n#{loot_table_name} -->\n"
-                output_file.write(header)
-                for item in loot_table_info:
-                    output_file.write(item + '\n')
-            
-            debug_log.write(f"Processed loot table: {loot_table_name} in file: {filename}\n")
-
 def extract_loot_table_info(data, loot_table_name, guid_mapping):
     """
     Extract loot table information from the YAML data.
@@ -95,14 +54,80 @@ def extract_loot_table_info(data, loot_table_name, guid_mapping):
             item_info = next((item for item in guid_mapping if item['guid'] == item_guid), {})
             item_name = to_sentence_case(item_info.get('name', 'unknown_item'))
         
-        loot_table_info.append(f"{{{{Loot table|{item_name}|{percent_chance:.2f}|{min_num}|{max_num}|{loot_table_name}}}}}")
+        loot_table_info.append({
+            'name': item_name,
+            'percentChance': percent_chance,
+            'min': min_num,
+            'max': max_num,
+            'is_loot_table': loot == 1
+        })
     
     return loot_table_info, contains_loot_list
+
+def select_output_file(loot_table_name, output_files):
+    """
+    Select the appropriate output file based on the loot table name.
+    """
+    if loot_table_name.startswith("Enemy_"):
+        return output_files['enemy']
+    elif "stone" in loot_table_name.lower():
+        return output_files['stone']
+    elif "microbe" in loot_table_name.lower():
+        return output_files['microbe']
+    elif "grass" in loot_table_name.lower() or "mixedseeds" in loot_table_name.lower():
+        return output_files['grass']
+    elif "ship" in loot_table_name.lower():
+        return output_files['ship']
+    elif "discoveritems" in loot_table_name.lower():
+        return output_files['discovery']
+    elif "friendcard" in loot_table_name.lower():
+        return output_files['friend_card']
+    else:
+        return output_files['other']
+
+def parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, output_files, debug_output_path):
+    """
+    Parse loot tables from asset files and write the formatted loot tables to various output files.
+    """
+    with open(loot_table_list_path, 'r') as file:
+        loot_table_files = file.read().splitlines()
+
+    with open(debug_output_path, 'w') as debug_log:
+        for filename in loot_table_files:
+            filepath = os.path.join(input_directory, filename)
+            with open(filepath, 'r') as file:
+                raw_content = file.read()
+                clean_content = preprocess_yaml_content(raw_content)
+                data = yaml.safe_load(clean_content)
+            
+            loot_table_name = data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
+            loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, guid_mapping)
+            
+            output_file = select_output_file(loot_table_name, output_files)
+            header = f"<!-- \n#{loot_table_name} -->\n"
+            output_file.write(header)
+            for item in loot_table_info:
+                if 'grass' in loot_table_name.lower() or 'mixedseeds' in loot_table_name.lower():
+                    output_file.write(f"{{{{Loot table|{item['name']}|{item['percentChance']:.4f}|{item['min']}|{item['max']}|{loot_table_name}}}}}\n")
+                else:
+                    output_file.write(f"{{{{Loot table|{item['name']}|{item['percentChance']:.2f}|{item['min']}|{item['max']}|{loot_table_name}}}}}\n")
+            
+            debug_log.write(f"Processed loot table: {loot_table_name} in file: {filename}\n")
 
 # Define paths
 input_directory = 'Input/Assets/MonoBehaviour'
 guid_mapping_path = 'Output/guid_lookup.json'
 loot_table_list_path = 'Output/Drops/loot_table_list.txt'
+output_files = {
+    'enemy': open('Output/Drops/enemy_loot_table.txt', 'w'),
+    'stone': open('Output/Drops/stone_loot_table.txt', 'w'),
+    'microbe': open('Output/Drops/microbe_loot_table.txt', 'w'),
+    'grass': open('Output/Drops/grass_loot_table.txt', 'w'),
+    'ship': open('Output/Drops/ship_loot_table.txt', 'w'),
+    'discovery': open('Output/Drops/discovery_loot_table.txt', 'w'),
+    'friend_card': open('Output/Drops/friend_card_loot_table.txt', 'w'),
+    'other': open('Output/Drops/other_loot_table.txt', 'w')
+}
 debug_output_path = '.hidden/debug_output/loot_table_debug_output.txt'
 
 # Ensure the output and debug directories exist
@@ -112,6 +137,11 @@ os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 guid_mapping = load_guid_mapping(guid_mapping_path)
 
 # Parse loot tables
-parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, debug_output_path)
+parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, output_files, debug_output_path)
 
+# Close all output files
+for file in output_files.values():
+    file.close()
+
+print("Parsing completed successfully.")
 print(f"Debug information has been written to {debug_output_path}")

@@ -9,7 +9,7 @@ scripts = [
     r"Scripts\email_parser.py",
     r"Scripts\infobox_item_parser.py",
     r"Scripts\infobox_seed_parser.py",
-    r"Scripts\loot_list_generator.py",
+    r"Scripts\loot_table_generator.py",
     r"Scripts\loot_list_parser.py",
     r"Scripts\loot_table_parser.py",
     r"Scripts\npc_gift_overrides_parser.py",

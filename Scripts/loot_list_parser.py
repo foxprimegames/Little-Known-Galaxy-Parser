@@ -1,3 +1,9 @@
+"""
+##Script Summary:
+This script parses loot lists from asset files and writes the formatted loot lists to an output file.
+    Loot lists are defined as having loot tables within them, but can be a mixture of items and additional tables.
+"""
+
 import os
 import re
 import yaml
