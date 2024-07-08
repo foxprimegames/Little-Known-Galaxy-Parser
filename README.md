@@ -26,6 +26,9 @@ loot_list_parser.py & loot_table_parser.py -- <br>
   loot_table creates an output of loot tables, to be put in the `Data:Loot Tables` page, these do not have nested loot tables within them.<br>
   Each output is formated as it would be needed on the wiki.<br>
 
+mission_infobox.py --<br>
+  Creates a list of mission infoboxes, in proper wiki format.<br>
+
 npc_gift_overrides_parser.py --<br>
   Creates a list of npcs, then looks at their .assets for gives they love/like/are neutral twoards/dislike.<br>
   Puts results in file folder: Output/Gifts<br>

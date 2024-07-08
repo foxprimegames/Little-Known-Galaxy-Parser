@@ -12,6 +12,7 @@ scripts = [
     r"Scripts\loot_table_generator.py",
     r"Scripts\loot_list_parser.py",
     r"Scripts\loot_table_parser.py",
+    r"Scripts\mission_infobox.py",
     r"Scripts\npc_gift_overrides_parser.py",
     r"Scripts\npc_gifts_for_player_parser.py",
     r"Scripts\recipe_crafting_parser.py",
