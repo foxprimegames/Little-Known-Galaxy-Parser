@@ -80,9 +80,9 @@ for filename in os.listdir(input_folder):
                 output_file.write(f"Markup Percent: {markup_percent}\n")
                 for store_set_detail in store_sets_details:
                     if store_set_detail['rndRollActive']:
-                        output_file.write(f"\nStore Set: [{store_set_detail['guid']}] - {store_set_detail['filename']} - Roll Amount: {store_set_detail['rndRollAmount']}\n")
+                        output_file.write(f"\nStore Set: {store_set_detail['filename']} - Roll Amount: {store_set_detail['rndRollAmount']}\n")
                     else:
-                        output_file.write(f"\nStore Set: [{store_set_detail['guid']}] - {store_set_detail['filename']}\n")
+                        output_file.write(f"\nStore Set: {store_set_detail['filename']}\n")
                     for item in store_set_detail['storeItemsInSet']:
                         item_guid = item.get('guid', 'unknown')
                         item_detail = next((entry for entry in guid_mapping if entry['guid'] == item_guid), None)
