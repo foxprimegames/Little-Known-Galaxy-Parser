@@ -36,6 +36,38 @@ def sentence_case(s):
     """
     return s.capitalize()
 
+def handle_super_item(item_name):
+    """
+    Adjusts the name of super items by removing 'super' and adding '/1'.
+
+    Args:
+        item_name (str): The name of the item.
+
+    Returns:
+        str: The adjusted item name.
+    """
+    if "super" in item_name.lower():
+        original_item_name = item_name
+        item_name = item_name.lower().replace("super ", "").strip()
+        return sentence_case(item_name), original_item_name
+    return item_name, None
+
+def handle_super_product(product_name):
+    """
+    Adjusts the name of super products by removing 'super' and adding '|quality = super'.
+
+    Args:
+        product_name (str): The name of the product.
+
+    Returns:
+        tuple: The adjusted product name, quality flag, and original product name.
+    """
+    if "super" in product_name.lower():
+        original_product_name = product_name
+        product_name = product_name.lower().replace("super ", "").strip()
+        return sentence_case(product_name), "|quality = super", original_product_name
+    return product_name, "", None
+
 def parse_production_recipes(directory, files_list, guid_mapping, machine_quantities, debug_file, output_file):
     """
     Parses the machine production recipes from the specified files and writes the output to a file.
@@ -63,6 +95,13 @@ def parse_production_recipes(directory, files_list, guid_mapping, machine_quanti
             item_name_match = re.search(r'itemName:\s*(.*)', data)
             item_name = sentence_case(item_name_match.group(1).strip()) if item_name_match else "unknown_item"
 
+            # Handle super items by mapping them to their base version
+            item_name, original_item_name = handle_super_item(item_name)
+            if original_item_name:
+                debug_file.write(f"Super item detected: Changed '{original_item_name}' to '{item_name}'\n")
+            else:
+                debug_file.write(f"Normal item: '{item_name}'\n")
+
             # Extract machine production guide details
             production_matches = re.findall(r'- machineType: (\d+).*?produceDuration: (\d+).*?itemToDrop: \{fileID: \d+, guid: ([a-f0-9]{32}), type: \d+\}.*?amtToGive:\s*\n\s*minimumNum: (\d+)\n\s*maxiumNum: (\d+)', data, re.DOTALL)
             for machine_type, produce_duration, item_to_drop_guid, min_num, max_num in production_matches:
@@ -74,13 +113,28 @@ def parse_production_recipes(directory, files_list, guid_mapping, machine_quanti
                 machine_name = sentence_case(machine_type_to_name(int(machine_type)))
                 quantity = machine_quantities.get(machine_name.lower(), 1)
 
-                debug_file.write(f"itemName: {item_name}, machineType: {machine_name}, produceDuration: {produce_duration}, itemToDrop: {product_name} (GUID: {item_to_drop_guid}), yield: {yield_amount}\n")
+                # Handle super products by mapping them to their base version
+                product_name, quality_flag, original_product_name = handle_super_product(product_name)
+                if original_product_name:
+                    debug_file.write(f"Super product detected: Changed '{original_product_name}' to '{product_name}'\n")
+                else:
+                    debug_file.write(f"Normal product: '{product_name}'\n")
+
+                if original_item_name:
+                    item_with_quantity = f"{item_name}*{quantity}/1"
+                else:
+                    item_with_quantity = f"{item_name}*{quantity}"
+
+                debug_file.write(f"itemName: {item_name}, machineType: {machine_name}, produceDuration: {produce_duration}, itemToDrop: {product_name} (GUID: {item_to_drop_guid}), yield: {yield_amount}, ingredients: {item_with_quantity}\n")
+
+                recipe_template = (
+                    f"{{{{Recipe|product = {product_name} |machine = {machine_name} |time = {produce_duration}hr |id = |recipeSource =\n"
+                    f"|ingredients = {item_with_quantity} |yield = {yield_amount} {quality_flag}}}}}"
+                )
 
                 if product_name not in recipes:
                     recipes[product_name] = []
-                recipes[product_name].append(
-                    f"{{{{Recipe|product = {product_name} |machine = {machine_name} |time = {produce_duration}hr |id = |recipeSource =\n|ingredients = {item_name}*{quantity} |yield = {yield_amount} }}}}"
-                )
+                recipes[product_name].append(recipe_template)
 
     sorted_products = sorted(recipes.items())
 
