@@ -70,6 +70,10 @@ def parse_mono_behaviour(file_path, lookup):
                 get_filename_from_guid(item.get('guid', 'None'), lookup) for item in mono_behaviour.get('unlockStoreItemsAtComplete', [])
             )
 
+            add_emails = '; '.join(
+                get_filename_from_guid(email.get('guid', 'None'), lookup) for email in mono_behaviour.get('addEmails', [])
+            )
+
             data = {
                 'questType': quest_type,
                 'npcOwner': mono_behaviour.get('npcOwner', {}).get('guid', file_path),
@@ -77,7 +81,8 @@ def parse_mono_behaviour(file_path, lookup):
                 'expiresInDays': expires_in_days,
                 'unlockStoreItemsAtComplete': unlock_store_items_at_complete,
                 'addItemsOnComplete': '; '.join(rewards),
-                'unlockQuests': '; '.join(quest.get('guid', file_path) for quest in mono_behaviour.get('unlockQuests', []))
+                'unlockQuests': '; '.join(quest.get('guid', file_path) for quest in mono_behaviour.get('unlockQuests', [])),
+                'addEmails': add_emails
             }
             debug_info.append(f"Parsed data from {file_path}: {data}")
         except yaml.YAMLError as e:
@@ -198,6 +203,7 @@ def format_quest_info(quests, guid_lookup):
                     f"|next     = {next_quests}\n"
                     f"}}}}\n"
                     f"Unlock Store Items at Complete GUID: {unlock_store_items}\n"
+                    f"Send Email: {replace_guids_with_filenames(mono_data['addEmails'], guid_lookup)}\n"
                 )
             else:
                 formatted_quests.append(
@@ -217,6 +223,7 @@ def format_quest_info(quests, guid_lookup):
                     f"|next     = \n"
                     f"}}}}\n"
                     f"Unlock Store Items at Complete GUID: \n"
+                    f"Send Email: \n"
                 )
         else:
             debug_info.append(f"No filename found for save_id: {quest['key']}")

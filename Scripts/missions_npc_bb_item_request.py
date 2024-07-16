@@ -160,7 +160,7 @@ def write_output(assets_info, output_folder, debug_logs, debug_output_path):
                     output_file.write(f"|rewards  = Credits\n")
                     output_file.write(f"|npcs     = {npc_name}\n")
                     output_file.write(f"|prev     = \n")
-                    output_file.write(f"|next     = }}\n\n")
+                    output_file.write(f"|next     = }}}}\n\n")
                     output_file.write(f"===Bulletin Board===\n")
                     output_file.write(f"When this mission is selected, the player will see a generic bulletin request that says:\n")
                     output_file.write(f"{{{{quote|{quest_details['bulletin']}}}}}\n\n")
