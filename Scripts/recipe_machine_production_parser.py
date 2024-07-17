@@ -1,6 +1,19 @@
 import os
 import re
 import json
+from Utilities import guid_utils  # Assuming this is the correct import for the utility functions
+
+def sentence_case(s):
+    """
+    Converts a string to sentence case.
+
+    Args:
+        s (str): The string to convert.
+
+    Returns:
+        str: The string in sentence case.
+    """
+    return s.capitalize()
 
 def find_files_with_section(directory, section_name):
     """
@@ -23,18 +36,6 @@ def find_files_with_section(directory, section_name):
                     files_with_section.append(filename)
 
     return files_with_section
-
-def sentence_case(s):
-    """
-    Converts a string to sentence case.
-
-    Args:
-        s (str): The string to convert.
-
-    Returns:
-        str: The string in sentence case.
-    """
-    return s.capitalize()
 
 def handle_super_item(item_name):
     """
@@ -187,19 +188,19 @@ with open(files_list_path, 'w') as files_list_file:
 print(f"Files with machineProductionGuide section have been written to {files_list_path}")
 
 # Load the GUID mapping
-with open(guid_lookup_path, 'r') as file:
-    guid_mapping = json.load(file)
+guid_mapping = guid_utils.load_guid_lookup(guid_lookup_path)
 
 # Load the machine quantities
 machine_quantities = {}
 for entry in guid_mapping:
     if 'name' in entry and entry['name'].lower() in ['canning pot', 'dehydrator', 'fermentation tank', 'fiber spinner', 'freezer', 'dark matter refiner', 'furnace', 'juicer', 'medicine machine', 'press', 'carbon converter', 'recycler', 'compost machine', 'microbe compost machine', 'advanced furnace', 'advanced dark matter refiner', 'battery generator']:
         machine_file = os.path.join(input_directory, entry['filename'] + '.asset')
-        with open(machine_file, 'r') as file:
-            data = file.read()
-            amt_items_required_match = re.search(r'amtItemsRequiredToRun:\s*(\d+)', data)
-            if amt_items_required_match:
-                machine_quantities[entry['name'].lower()] = int(amt_items_required_match.group(1))
+        if os.path.exists(machine_file):
+            with open(machine_file, 'r') as file:
+                data = file.read()
+                amt_items_required_match = re.search(r'amtItemsRequiredToRun:\s*(\d+)', data)
+                if amt_items_required_match:
+                    machine_quantities[entry['name'].lower()] = int(amt_items_required_match.group(1))
 
 # Open the debug file and output file for writing
 with open(debug_output_path, 'w') as debug_file, open(output_file_path, 'w') as output_file:

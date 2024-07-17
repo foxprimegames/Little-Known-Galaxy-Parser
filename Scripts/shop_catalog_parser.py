@@ -31,10 +31,13 @@ def load_guid_lookup(guid_lookup_file):
 # Load the GUID mappings
 guid_mapping = load_guid_lookup(guid_lookup_file)
 
+# Function to find item details based on GUID
+def find_item_details(guid, guid_mapping):
+    return next((entry for entry in guid_mapping if entry['guid'] == guid), None)
+
 # Process each file in the input folder
 for filename in os.listdir(input_folder):
     if filename.startswith('_StoreCatalog') and not filename.endswith('.meta'):
-        # Read the file
         file_path = os.path.join(input_folder, filename)
         try:
             with open(file_path, 'r') as file:
@@ -55,7 +58,7 @@ for filename in os.listdir(input_folder):
             for store_set in store_sets:
                 guid = store_set.get('guid')
                 if guid:
-                    store_set_detail = next((entry for entry in guid_mapping if entry['guid'] == guid), None)
+                    store_set_detail = find_item_details(guid, guid_mapping)
                     if store_set_detail:
                         store_set_filename = store_set_detail['filename']
                         store_set_path = os.path.join(input_folder, store_set_filename + '.asset')
@@ -85,7 +88,7 @@ for filename in os.listdir(input_folder):
                         output_file.write(f"\nStore Set: {store_set_detail['filename']}\n")
                     for item in store_set_detail['storeItemsInSet']:
                         item_guid = item.get('guid', 'unknown')
-                        item_detail = next((entry for entry in guid_mapping if entry['guid'] == item_guid), None)
+                        item_detail = find_item_details(item_guid, guid_mapping)
                         if item_detail:
                             item_filename = item_detail['filename']
                             item_path = os.path.join(input_folder, item_filename + '.asset')
@@ -98,7 +101,7 @@ for filename in os.listdir(input_folder):
                                 item_data = yaml.safe_load(preprocess_yaml_content(item_content))
                                 item_for_sale_guid = item_data.get('MonoBehaviour', {}).get('itemForSale', {}).get('guid', 'unknown')
                                 limited_purchase = item_data.get('MonoBehaviour', {}).get('limitedPurchase', 0)
-                                item_for_sale_detail = next((entry for entry in guid_mapping if entry['guid'] == item_for_sale_guid), None)
+                                item_for_sale_detail = find_item_details(item_for_sale_guid, guid_mapping)
                                 if item_for_sale_detail:
                                     item_for_sale_filename = item_for_sale_detail['filename']
                                     item_for_sale_path = os.path.join(input_folder, item_for_sale_filename + '.asset')
@@ -130,7 +133,7 @@ for filename in os.listdir(input_folder):
                         debug_log.write(f"\nStore Set: [{store_set_detail['guid']}] - {store_set_detail['filename']}\n")
                     for item in store_set_detail['storeItemsInSet']:
                         item_guid = item.get('guid', 'unknown')
-                        item_detail = next((entry for entry in guid_mapping if entry['guid'] == item_guid), None)
+                        item_detail = find_item_details(item_guid, guid_mapping)
                         if item_detail:
                             item_filename = item_detail['filename']
                             item_path = os.path.join(input_folder, item_filename + '.asset')
@@ -142,7 +145,7 @@ for filename in os.listdir(input_folder):
                                 item_data = yaml.safe_load(preprocess_yaml_content(item_content))
                                 item_for_sale_guid = item_data.get('MonoBehaviour', {}).get('itemForSale', {}).get('guid', 'unknown')
                                 limited_purchase = item_data.get('MonoBehaviour', {}).get('limitedPurchase', 0)
-                                item_for_sale_detail = next((entry for entry in guid_mapping if entry['guid'] == item_for_sale_guid), None)
+                                item_for_sale_detail = find_item_details(item_for_sale_guid, guid_mapping)
                                 if item_for_sale_detail:
                                     item_for_sale_filename = item_for_sale_detail['filename']
                                     item_for_sale_path = os.path.join(input_folder, item_for_sale_filename + '.asset')

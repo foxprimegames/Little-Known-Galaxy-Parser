@@ -1,12 +1,11 @@
 import os
 import re
 import yaml
+from Utilities.unity_yaml_loader import preprocess_yaml_content
 
-def preprocess_yaml_content(content):
-    """
-    Remove custom Unity tags from YAML content.
-    """
-    return re.sub(r'!u![\d]+ &[\d]+', '', content)
+def log_debug(message):
+    with open(debug_output_path, 'a', encoding='utf-8') as debug_file:
+        debug_file.write(message + '\n')
 
 def find_loot_table_files(input_directory, output_file_path, debug_output_path):
     """
@@ -44,8 +43,12 @@ debug_output_path = '.hidden/debug_output/loot_table_extraction_debug.txt'
 os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
-# Find loot table files
-find_loot_table_files(input_directory, output_file_path, debug_output_path)
+try:
+    # Find loot table files
+    find_loot_table_files(input_directory, output_file_path, debug_output_path)
 
-print(f"Loot table list has been written to {output_file_path}")
-print(f"Debug information has been written to {debug_output_path}")
+    # Print the required messages to the terminal
+    print(f"Loot table list has been written to '{output_file_path}'")
+except Exception as e:
+    log_debug(f'An error occurred: {str(e)}')
+    print(f"An error occurred. Check the debug output for details: '{debug_output_path}'")

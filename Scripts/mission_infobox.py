@@ -2,38 +2,23 @@ import json
 import os
 import re
 import yaml
+from Utilities import guid_utils
+from Utilities.unity_yaml_loader import preprocess_yaml_content
 
+# Define paths
 input_file_path = 'Input/Assets/TextAsset/English_Quests.txt'
 guid_lookup_path = 'Output/guid_lookup.json'
 mono_behaviour_path = 'Input/Assets/MonoBehaviour/'
 output_file_path = 'Output/Missions/mission_infobox.txt'
 debug_output_path = '.hidden/debug_output/mission_infobox_debug.txt'
 
-def load_guid_lookup(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return json.load(file)
+# Ensure output directories exist
+os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
-def get_filename_from_guid(guid, lookup):
-    for entry in lookup:
-        if entry.get('guid') == guid:
-            return entry['filename']
-    return guid
-
-def get_name_from_guid(guid, lookup):
-    for entry in lookup:
-        if entry.get('guid') == guid:
-            return entry['name']
-    return guid
-
-def get_filename_from_save_id(save_id, lookup):
-    for entry in lookup:
-        if entry.get('save_id') == save_id:
-            return entry['filename']
-    return None
-
-def preprocess_yaml_content(content):
-    content = re.sub(r'!u!\d+ &\d+', '', content)
-    return content
+def log_debug(message):
+    with open(debug_output_path, 'a', encoding='utf-8') as debug_file:
+        debug_file.write(message + '\n')
 
 def parse_mono_behaviour(file_path, lookup):
     debug_info = []
@@ -53,7 +38,7 @@ def parse_mono_behaviour(file_path, lookup):
                 item_data = item.get('itemData', {}).get('guid', 'None')
                 amount_of_item = item.get('amountOfItem', 'N/A')
                 if item_data != 'None':
-                    item_name = get_name_from_guid(item_data, lookup)
+                    item_name = guid_utils.get_name_from_guid(item_data, lookup)
                     rewards.append(f"{item_name}*{amount_of_item}")
                 else:
                     rewards.append(f"{item_data}*{amount_of_item}")
@@ -67,11 +52,11 @@ def parse_mono_behaviour(file_path, lookup):
             quest_type = quest_type_mapping.get(quest_type, quest_type)
 
             unlock_store_items_at_complete = '; '.join(
-                get_filename_from_guid(item.get('guid', 'None'), lookup) for item in mono_behaviour.get('unlockStoreItemsAtComplete', [])
+                guid_utils.get_filename_from_guid(item.get('guid', 'None'), lookup) for item in mono_behaviour.get('unlockStoreItemsAtComplete', [])
             )
 
             add_emails = '; '.join(
-                get_filename_from_guid(email.get('guid', 'None'), lookup) for email in mono_behaviour.get('addEmails', [])
+                guid_utils.get_filename_from_guid(email.get('guid', 'None'), lookup) for email in mono_behaviour.get('addEmails', [])
             )
 
             data = {
@@ -105,7 +90,7 @@ def parse_goal(file_path, lookup):
             goal_data = yaml_content.get('MonoBehaviour', {})
             item_to_collect = goal_data.get('itemToCollect', {}).get('guid')
             if item_to_collect:
-                item_name = get_name_from_guid(item_to_collect, lookup)
+                item_name = guid_utils.get_name_from_guid(item_to_collect, lookup)
                 required_amount = goal_data.get('requiredAmount', 'N/A')
                 quality_required = goal_data.get('itemQuery', {}).get('qualityRequired', 0)
 
@@ -154,10 +139,10 @@ def replace_guids_with_filenames(text, lookup):
     for item in items:
         if '*' in item:
             guid, amount = item.split('*')
-            name = get_name_from_guid(guid, lookup)
+            name = guid_utils.get_name_from_guid(guid, lookup)
             replaced.append(f"{name}*{amount}")
         else:
-            name = get_name_from_guid(item, lookup)
+            name = guid_utils.get_name_from_guid(item, lookup)
             replaced.append(name)
     return '; '.join(replaced)
 
@@ -165,7 +150,7 @@ def format_quest_info(quests, guid_lookup):
     formatted_quests = []
     debug_info = []
     for quest in quests:
-        mono_file_name = get_filename_from_save_id(quest['key'], guid_lookup)
+        mono_file_name = guid_utils.get_filename_from_save_id(quest['key'], guid_lookup)
         if mono_file_name:
             mono_file_path = os.path.join(mono_behaviour_path, f"{mono_file_name}.asset")
             mono_data, mono_debug_info = parse_mono_behaviour(mono_file_path, guid_lookup)
@@ -174,7 +159,7 @@ def format_quest_info(quests, guid_lookup):
             requires = []
             if mono_data:
                 for goal_guid in mono_data['goalsList'].split('; '):
-                    goal_filename = get_filename_from_guid(goal_guid, guid_lookup)
+                    goal_filename = guid_utils.get_filename_from_guid(goal_guid, guid_lookup)
                     goal_path = os.path.join(mono_behaviour_path, f"{goal_filename}.asset")
                     goal_requires, goal_debug_info = parse_goal(goal_path, guid_lookup)
                     if goal_requires:
@@ -198,7 +183,7 @@ def format_quest_info(quests, guid_lookup):
                     f"|prereq   = \n"
                     f"|requires = {'; '.join(requires)}\n"
                     f"|rewards  = {replace_guids_with_filenames(mono_data['addItemsOnComplete'], guid_lookup)}\n"
-                    f"|npcs     = {get_name_from_guid(mono_data['npcOwner'], guid_lookup)}\n"
+                    f"|npcs     = {guid_utils.get_name_from_guid(mono_data['npcOwner'], guid_lookup)}\n"
                     f"|prev     = \n"
                     f"|next     = {next_quests}\n"
                     f"}}}}\n"
@@ -245,7 +230,7 @@ def main():
     debug_info = []
     
     try:
-        guid_lookup = load_guid_lookup(guid_lookup_path)
+        guid_lookup = guid_utils.load_guid_lookup(guid_lookup_path)
         debug_info.append(f"Loaded GUID lookup from: {guid_lookup_path}")
     except Exception as e:
         debug_info.append(f"Failed to load GUID lookup: {e}")

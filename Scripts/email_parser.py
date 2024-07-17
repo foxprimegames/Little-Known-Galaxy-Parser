@@ -1,6 +1,7 @@
 import os
 import re
 import json
+from Utilities import guid_utils
 
 def load_guid_mapping(mapping_file_path):
     """
@@ -12,9 +13,12 @@ def load_guid_mapping(mapping_file_path):
     Returns:
         dict: A dictionary mapping GUIDs to their corresponding information.
     """
-    with open(mapping_file_path, 'r') as file:
-        guid_mapping = json.load(file)
-    return guid_mapping
+    try:
+        guid_mapping = guid_utils.load_guid_lookup(mapping_file_path)
+        return guid_mapping
+    except Exception as e:
+        log_debug(f"Error loading GUID mapping: {e}")
+        return {}
 
 def load_english_emails(file_path):
     """
@@ -122,6 +126,10 @@ def parse_email_assets(input_directory, guid_mapping, debug_file):
 
     return emails
 
+def log_debug(message):
+    with open(debug_output_path, 'a') as debug_file:
+        debug_file.write(message + '\n')
+
 # Define the input and output file paths
 input_directory = 'Input/Assets'
 mapping_file_path = 'Output/guid_lookup.json'
@@ -132,19 +140,23 @@ debug_output_path = '.hidden/debug_output/email_debug_output.txt'
 os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
-# Load the GUID mapping
-guid_mapping = load_guid_mapping(mapping_file_path)
+try:
+    # Load the GUID mapping
+    guid_mapping = load_guid_mapping(mapping_file_path)
 
-# Open the debug file for writing
-with open(debug_output_path, 'w') as debug_file:
-    debug_file.write(f"GUID to Item Mapping: {guid_mapping}\n")
+    # Open the debug file for writing
+    with open(debug_output_path, 'w') as debug_file:
+        debug_file.write(f"GUID to Item Mapping: {guid_mapping}\n")
 
-    # Parse the email assets and get the formatted content
-    parsed_emails = parse_email_assets(input_directory, guid_mapping, debug_file)
+        # Parse the email assets and get the formatted content
+        parsed_emails = parse_email_assets(input_directory, guid_mapping, debug_file)
 
-    # Write the output to a new file
-    with open(output_file_path, 'w') as output_file:
-        output_file.write('\n\n'.join(parsed_emails))
+        # Write the output to a new file
+        with open(output_file_path, 'w') as output_file:
+            output_file.write('\n\n'.join(parsed_emails))
 
-print(f"Parsed emails have been written to {output_file_path}")
-print(f"Debug information has been written to {debug_output_path}")
+    # Print the required messages to the terminal
+    print(f"Parsed emails have been written to '{output_file_path}'")
+except Exception as e:
+    log_debug(f'An error occurred: {str(e)}')
+    print(f"An error occurred. Check the debug output for details: '{debug_output_path}'")

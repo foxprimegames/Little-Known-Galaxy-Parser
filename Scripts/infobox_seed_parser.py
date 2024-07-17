@@ -1,11 +1,7 @@
 import os
 import re
 import json
-
-def load_guid_mapping(mapping_file_path):
-    with open(mapping_file_path, 'r') as file:
-        guid_mapping = json.load(file)
-    return guid_mapping
+from Utilities import guid_utils
 
 def convert_guid_to_name(guid, guid_mapping):
     for entry in guid_mapping:
@@ -95,6 +91,10 @@ def extract_seed_info(directory, guid_mapping, seed_output_file_path, debug_file
             seed_output_file.write(f"|regrowth    = {seed_info.get('produceDurationAfterMature', '')}\n")
             seed_output_file.write("}}\n\n")
 
+def log_debug(message):
+    with open(debug_file_path, 'a') as debug_file:
+        debug_file.write(message + '\n')
+
 # Define the input and output file paths
 input_directory = 'Input/Assets/MonoBehaviour'
 mapping_file_path = 'Output/guid_lookup.json'
@@ -105,11 +105,15 @@ debug_file_path = '.hidden/debug_output/seed_debug_output.txt'
 os.makedirs(os.path.dirname(seed_output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_file_path), exist_ok=True)
 
-# Load the GUID mapping
-guid_mapping = load_guid_mapping(mapping_file_path)
+try:
+    # Load the GUID mapping
+    guid_mapping = guid_utils.load_guid_lookup(mapping_file_path)
 
-# Extract the seed information
-extract_seed_info(input_directory, guid_mapping, seed_output_file_path, debug_file_path)
+    # Extract the seed information
+    extract_seed_info(input_directory, guid_mapping, seed_output_file_path, debug_file_path)
 
-print(f"Seed information has been written to {seed_output_file_path}")
-print(f"Debug information has been written to {debug_file_path}")
+    # Print the required messages to the terminal
+    print(f"Seed information has been written to '{seed_output_file_path}'")
+except Exception as e:
+    log_debug(f'An error occurred: {str(e)}')
+    print(f"An error occurred. Check the debug output for details: '{debug_file_path}'")

@@ -1,27 +1,13 @@
-"""
-##Script Summary:
-This script parses loot lists from asset files and writes the formatted loot lists to an output file.
-    Loot lists are defined as having loot tables within them, but can be a mixture of items and additional tables.
-"""
-
+import json
 import os
 import re
 import yaml
-import json
+from Utilities import guid_utils
+from Utilities.unity_yaml_loader import preprocess_yaml_content
 
-def load_guid_mapping(guid_mapping_path):
-    """
-    Load the GUID to item mapping from a JSON file.
-    """
-    with open(guid_mapping_path, 'r') as file:
-        guid_mapping = json.load(file)
-    return guid_mapping
-
-def preprocess_yaml_content(content):
-    """
-    Remove custom Unity tags from YAML content.
-    """
-    return re.sub(r'!u![\d]+ &[\d]+', '', content)
+def log_debug(message):
+    with open(debug_output_path, 'a', encoding='utf-8') as debug_file:
+        debug_file.write(message + '\n')
 
 def to_sentence_case(text):
     """
@@ -57,23 +43,26 @@ def parse_loot_lists(input_directory, guid_mapping, loot_table_list_path, list_o
 
     with open(list_output_file_path, 'w') as list_output_file, open(debug_output_path, 'w') as debug_log:
         for filename in loot_table_files:
-            filepath = os.path.join(input_directory, filename)
-            with open(filepath, 'r') as file:
-                raw_content = file.read()
-                clean_content = preprocess_yaml_content(raw_content)
-                data = yaml.safe_load(clean_content)
-            
-            loot_table_name = data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
-            loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping)
-            
-            if contains_loot_list:
-                list_output_file.write(f"<!-- \n#{loot_table_name} -->\n")
-                list_output_file.write(f"{{{{TYPE drops|lootlist={loot_table_name}|name=\n")
-                for item in loot_table_info:
-                    list_output_file.write(item + '\n')
-                list_output_file.write("}}\n")
-            
-            debug_log.write(f"Processed loot list: {loot_table_name} in file: {filename}\n")
+            try:
+                filepath = os.path.join(input_directory, filename)
+                with open(filepath, 'r') as file:
+                    raw_content = file.read()
+                    clean_content = preprocess_yaml_content(raw_content)
+                    data = yaml.safe_load(clean_content)
+                
+                loot_table_name = data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
+                loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping)
+                
+                if contains_loot_list:
+                    list_output_file.write(f"<!-- \n#{loot_table_name} -->\n")
+                    list_output_file.write(f"{{{{TYPE drops|lootlist={loot_table_name}|name=\n")
+                    for item in loot_table_info:
+                        list_output_file.write(item + '\n')
+                    list_output_file.write("}}\n")
+                
+                debug_log.write(f"Processed loot list: {loot_table_name} in file: {filename}\n")
+            except Exception as e:
+                log_debug(f"Error processing file {filename}: {str(e)}")
 
 def extract_loot_table_info(data, loot_table_name, input_directory, guid_mapping):
     """
@@ -115,11 +104,15 @@ debug_output_path = '.hidden/debug_output/loot_table_debug_output.txt'
 os.makedirs(os.path.dirname(list_output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
-# Load GUID mapping
-guid_mapping = load_guid_mapping(guid_mapping_path)
+try:
+    # Load GUID mapping
+    guid_mapping = guid_utils.load_guid_lookup(guid_mapping_path)
 
-# Parse loot lists
-parse_loot_lists(input_directory, guid_mapping, loot_table_list_path, list_output_file_path, debug_output_path)
+    # Parse loot lists
+    parse_loot_lists(input_directory, guid_mapping, loot_table_list_path, list_output_file_path, debug_output_path)
 
-print(f"Parsed loot lists have been written to {list_output_file_path}")
-print(f"Debug information has been written to {debug_output_path}")
+    # Print the required messages to the terminal
+    print(f"Parsed loot lists have been written to '{list_output_file_path}'")
+except Exception as e:
+    log_debug(f'An error occurred: {str(e)}')
+    print(f"An error occurred. Check the debug output for details: '{debug_output_path}'")

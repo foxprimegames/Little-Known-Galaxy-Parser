@@ -1,6 +1,9 @@
 import os
 import re
 import fnmatch
+import sys
+from Utilities import guid_utils
+from Utilities.unity_yaml_loader import preprocess_yaml_content
 
 # Function to parse a single NPC file
 def parse_npc_file(data, debug_file):
@@ -106,9 +109,11 @@ def format_dialogues(npc_name, dialogues):
 # Main script to process files in the input folder
 input_folder = "Input/Assets/TextAsset"
 output_folder = "Output/Dialogues"
+debug_output_file = os.path.join('.hidden/debug_output', 'npc_dialogue_debug.txt')
 
-# Ensure output folder exists
+# Ensure output and debug output folders exist
 os.makedirs(output_folder, exist_ok=True)
+os.makedirs(os.path.dirname(debug_output_file), exist_ok=True)
 
 # List of patterns to ignore
 ignore_patterns = [
@@ -126,28 +131,39 @@ ignore_patterns = [
     "*TBD*"
 ]
 
-for filename in os.listdir(input_folder):
-    if any(fnmatch.fnmatch(filename, pattern) for pattern in ignore_patterns):
-        continue  # Skip processing this file
+def log_debug(message):
+    with open(debug_output_file, 'a', encoding='utf-8') as debug_file:
+        debug_file.write(message + '\n')
 
-    if filename.endswith(".txt"):
-        input_filepath = os.path.join(input_folder, filename)
-        
-        # Read the file with UTF-8 encoding
-        with open(input_filepath, 'r', encoding='utf-8') as file:
-            data = file.read()
+if __name__ == '__main__':
+    try:
+        for filename in os.listdir(input_folder):
+            if any(fnmatch.fnmatch(filename, pattern) for pattern in ignore_patterns):
+                continue  # Skip processing this file
 
-        # Parse the content and write debug info to a file with UTF-8 encoding
-        debug_output_path = 'debug_output.txt'
-        with open(debug_output_path, 'w', encoding='utf-8') as debug_file:
-            npc_name, dialogues = parse_npc_file(data, debug_file)
+            if filename.endswith(".txt"):
+                input_filepath = os.path.join(input_folder, filename)
+                
+                # Read the file with UTF-8 encoding
+                with open(input_filepath, 'r', encoding='utf-8') as file:
+                    data = file.read()
 
-        # Format the dialogues
-        formatted_dialogues = format_dialogues(npc_name, dialogues)
+                # Parse the content and write debug info to a file with UTF-8 encoding
+                with open(debug_output_file, 'a', encoding='utf-8') as debug_file:
+                    npc_name, dialogues = parse_npc_file(data, debug_file)
 
-        # Write the output to a file named after the NPC with _Dialogue appended
-        output_filename = f"{npc_name}_Dialogue.txt"
-        output_filepath = os.path.join(output_folder, output_filename)
-        with open(output_filepath, 'w', encoding='utf-8') as output_file:
-            for line in formatted_dialogues:
-                output_file.write(line + '\n')
+                # Format the dialogues
+                formatted_dialogues = format_dialogues(npc_name, dialogues)
+
+                # Write the output to a file named after the NPC with _Dialogue appended
+                output_filename = f"{npc_name}_Dialogue.txt"
+                output_filepath = os.path.join(output_folder, output_filename)
+                with open(output_filepath, 'w', encoding='utf-8') as output_file:
+                    for line in formatted_dialogues:
+                        output_file.write(line + '\n')
+
+        # Print the required messages to the terminal
+        print(f"NPC dialogues have been successfully processed and written to '{output_folder}'")
+    except Exception as e:
+        log_debug(f'An error occurred: {str(e)}')
+        print(f"An error occurred. Check the debug output for details: '{debug_output_file}'")

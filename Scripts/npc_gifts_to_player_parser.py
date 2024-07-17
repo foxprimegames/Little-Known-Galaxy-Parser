@@ -2,6 +2,7 @@ import os
 import re
 import json
 from collections import defaultdict
+from Utilities import guid_utils
 
 # Define paths
 input_folder = 'Input/Assets/TextAsset'
@@ -15,14 +16,19 @@ debug_file = os.path.join(debug_folder, 'npc_gifts_to_player_debug.txt')
 os.makedirs(output_folder, exist_ok=True)
 os.makedirs(debug_folder, exist_ok=True)
 
-# Function to load the guid lookup data
-def load_guid_mapping(mapping_file_path):
-    with open(mapping_file_path, 'r') as file:
-        guid_mapping = json.load(file)
-    return guid_mapping
+# Function to log debug information
+def log_debug(message):
+    with open(debug_file, 'a', encoding='utf-8') as debug_file:
+        debug_file.write(message + '\n')
 
 # Load the guid lookup data
-guid_mapping = load_guid_mapping(guid_lookup_path)
+try:
+    guid_mapping = guid_utils.load_guid_lookup(guid_lookup_path)
+    log_debug(f"Loaded GUID lookup from: {guid_lookup_path}")
+except Exception as e:
+    log_debug(f"Failed to load GUID lookup: {e}")
+    print("An error occurred. Check the debug output for details.")
+    exit()
 
 # Create dictionaries to map save_id and item_id to names
 save_id_to_name = {entry['save_id']: entry['name'] for entry in guid_mapping if 'save_id' in entry and 'name' in entry}
@@ -31,13 +37,10 @@ item_id_to_name = {entry['save_id']: entry['name'] for entry in guid_mapping if 
 # Regular expressions to find the quest key, itemID, and NPC name in the specified pattern
 npc_name_pattern = re.compile(r'"name":\s*"(.*?)"')
 quest_pattern = re.compile(r'"key":\s*"(quest_\d+)"')
-text_set_pattern = re.compile(r'"textSet":\s*\[(.*?)\]', re.DOTALL)
 reward_pattern = re.compile(r'"boxType": "Reward".*?"itemID": "(item_\d+)",\s*"amount": (\d+)', re.DOTALL)
-dialogue_pattern = re.compile(r'"text":\s*"(.*?)"', re.DOTALL)
 
 # Lists to store results and debug information
 results = []
-debug_info = []
 npc_gifts_combined = defaultdict(list)
 
 # Function to find NPC name in the file content
@@ -72,17 +75,17 @@ for root, dirs, files in os.walk(input_folder):
                                 item_name = to_sentence_case(item_id_to_name.get(item_id, f"Unknown ({item_id})"))
                                 amount_str = f"*{amount}" if amount > 1 else ""
                                 npc_gifts_combined[npc_name].append(f"{item_name}{amount_str}:Dialogue after starting [[{quest_name}]]")
-                                debug_info.append(f"Found reward for {quest} ({quest_name}) in {file} with item {item_id} ({item_name}) and amount {amount}")
+                                log_debug(f"Found reward for {quest} ({quest_name}) in {file} with item {item_id} ({item_name}) and amount {amount}")
                             else:
-                                debug_info.append(f"No reward found for {quest} in {file}")
+                                log_debug(f"No reward found for {quest} in {file}")
                         else:
-                            debug_info.append(f"No textSet found for {quest} in {file}")
+                            log_debug(f"No textSet found for {quest} in {file}")
                     
             except Exception as e:
-                debug_info.append(f"Error processing file {file}: {e}")
+                log_debug(f"Error processing file {file}: {e}")
 
 # Parse email gifts
-def parse_email_assets(input_directory, guid_mapping, debug_file):
+def parse_email_assets(input_directory, guid_mapping):
     email_gifts = {}
     english_emails_path = os.path.join(input_directory, 'TextAsset', 'English_Emails.txt')
     
@@ -138,18 +141,13 @@ def parse_email_assets(input_directory, guid_mapping, debug_file):
             npc_gifts_combined[npc_name].append(f"{gift_str}:{formatted_email_name}")
 
 # Parse the email assets
-parse_email_assets('Input/Assets', guid_mapping, debug_file)
+parse_email_assets('Input/Assets', guid_mapping)
 
 # Write results to the output file, excluding entries with 'false'
 with open(output_file, 'w', encoding='utf-8') as f:
     for npc_name, gifts in npc_gifts_combined.items():
         combined_gifts = ', '.join(gifts)
         f.write(f"## {npc_name}\n{combined_gifts}\n\n")  # Add a blank line between NPC entries
-
-# Write debug information to the debug file
-with open(debug_file, 'w', encoding='utf-8') as f:
-    for info in debug_info:
-        f.write(info + '\n')
 
 # Print messages to the terminal
 print(f"Gifts for the player written to {output_file}")

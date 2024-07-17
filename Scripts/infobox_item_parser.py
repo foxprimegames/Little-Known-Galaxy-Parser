@@ -1,11 +1,7 @@
 import os
 import re
 import json
-
-def load_guid_mapping(mapping_file_path):
-    with open(mapping_file_path, 'r') as file:
-        guid_mapping = json.load(file)
-    return guid_mapping
+from Utilities import guid_utils
 
 def adjust_categories(item_name, item_category, sub_category, item_type):
     clothing_categories = ["Accessory", "Hair", "Hat", "Pants", "Shirt", "Helmet"]
@@ -238,6 +234,10 @@ def extract_price_and_restoration_info(directory, guid_mapping, sell_output_file
 
                 output_file.write("}}\n\n")
 
+def log_debug(message):
+    with open(debug_file_path, 'a') as debug_file:
+        debug_file.write(message + '\n')
+
 # Define the input and output file paths
 input_directory = 'Input/Assets/MonoBehaviour'
 mapping_file_path = 'Output/guid_lookup.json'
@@ -250,11 +250,15 @@ os.makedirs(os.path.dirname(sell_output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(no_sell_output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_file_path), exist_ok=True)
 
-# Load the GUID mapping
-guid_mapping = load_guid_mapping(mapping_file_path)
+try:
+    # Load the GUID mapping
+    guid_mapping = guid_utils.load_guid_lookup(mapping_file_path)
 
-# Extract the price and restoration information
-extract_price_and_restoration_info(input_directory, guid_mapping, sell_output_file_path, no_sell_output_file_path, debug_file_path)
+    # Extract the price and restoration information
+    extract_price_and_restoration_info(input_directory, guid_mapping, sell_output_file_path, no_sell_output_file_path, debug_file_path)
 
-print(f"Price and restoration information has been written to {sell_output_file_path} and {no_sell_output_file_path}")
-print(f"Debug information has been written to {debug_file_path}")
+    # Print the required messages to the terminal
+    print(f"Price and restoration information has been written to '{sell_output_file_path}' and '{no_sell_output_file_path}'")
+except Exception as e:
+    log_debug(f'An error occurred: {str(e)}')
+    print(f"An error occurred. Check the debug output for details: '{debug_file_path}'")

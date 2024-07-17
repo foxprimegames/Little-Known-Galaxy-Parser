@@ -135,12 +135,12 @@ def main():
             debug_file.write(f"Filtered filenames: {filtered_filenames}\n")
         
         # Print success message to terminal
-        print("Filenames with save_id starting with 'cine_' have been successfully written to 'cutscenes.txt'.")
+        print(f"Filenames with save_id starting with 'cine_' have been successfully written to '{output_file_path}'.")
 
     except Exception as e:
         with open(debug_output_path, 'a') as debug_file:
             debug_file.write(f"An error occurred: {str(e)}\n")
-        print("An error occurred. Check the debug output for details.")
+        print(f"An error occurred. Check the debug output for details: '{debug_output_path}'")
 
 if __name__ == "__main__":
     main()

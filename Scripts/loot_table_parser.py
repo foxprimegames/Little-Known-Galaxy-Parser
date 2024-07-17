@@ -1,28 +1,13 @@
-"""
-##Script Summary:
-This script parses loot tables from asset files and writes the formatted loot tables to various 
-    output files based on specific naming criteria.
-    Loot tables are defined as only have singular items nested within them, not other loot tables.
-"""
-
 import os
 import re
 import yaml
 import json
+from Utilities import guid_utils
+from Utilities.unity_yaml_loader import preprocess_yaml_content
 
-def load_guid_mapping(guid_mapping_path):
-    """
-    Load the GUID to item mapping from a JSON file.
-    """
-    with open(guid_mapping_path, 'r') as file:
-        guid_mapping = json.load(file)
-    return guid_mapping
-
-def preprocess_yaml_content(content):
-    """
-    Remove custom Unity tags from YAML content.
-    """
-    return re.sub(r'!u![\d]+ &[\d]+', '', content)
+def log_debug(message):
+    with open(debug_output_path, 'a', encoding='utf-8') as debug_file:
+        debug_file.write(message + '\n')
 
 def to_sentence_case(text):
     """
@@ -94,25 +79,28 @@ def parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, outpu
 
     with open(debug_output_path, 'w') as debug_log:
         for filename in loot_table_files:
-            filepath = os.path.join(input_directory, filename)
-            with open(filepath, 'r') as file:
-                raw_content = file.read()
-                clean_content = preprocess_yaml_content(raw_content)
-                data = yaml.safe_load(clean_content)
-            
-            loot_table_name = data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
-            loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, guid_mapping)
-            
-            output_file = select_output_file(loot_table_name, output_files)
-            header = f"<!-- \n#{loot_table_name} -->\n"
-            output_file.write(header)
-            for item in loot_table_info:
-                if 'grass' in loot_table_name.lower() or 'mixedseeds' in loot_table_name.lower():
-                    output_file.write(f"{{{{Loot table|{item['name']}|{item['percentChance']:.4f}|{item['min']}|{item['max']}|{loot_table_name}}}}}\n")
-                else:
-                    output_file.write(f"{{{{Loot table|{item['name']}|{item['percentChance']:.2f}|{item['min']}|{item['max']}|{loot_table_name}}}}}\n")
-            
-            debug_log.write(f"Processed loot table: {loot_table_name} in file: {filename}\n")
+            try:
+                filepath = os.path.join(input_directory, filename)
+                with open(filepath, 'r') as file:
+                    raw_content = file.read()
+                    clean_content = preprocess_yaml_content(raw_content)
+                    data = yaml.safe_load(clean_content)
+                
+                loot_table_name = data.get('MonoBehaviour', {}).get('m_Name', 'unknown_loot_table')
+                loot_table_info, contains_loot_list = extract_loot_table_info(data, loot_table_name, guid_mapping)
+                
+                output_file = select_output_file(loot_table_name, output_files)
+                header = f"<!-- \n#{loot_table_name} -->\n"
+                output_file.write(header)
+                for item in loot_table_info:
+                    if 'grass' in loot_table_name.lower() or 'mixedseeds' in loot_table_name.lower():
+                        output_file.write(f"{{{{Loot table|{item['name']}|{item['percentChance']:.4f}|{item['min']}|{item['max']}|{loot_table_name}}}}}\n")
+                    else:
+                        output_file.write(f"{{{{Loot table|{item['name']}|{item['percentChance']:.2f}|{item['min']}|{item['max']}|{loot_table_name}}}}}\n")
+                
+                debug_log.write(f"Processed loot table: {loot_table_name} in file: {filename}\n")
+            except Exception as e:
+                log_debug(f"Error processing file {filename}: {str(e)}")
 
 # Define paths
 input_directory = 'Input/Assets/MonoBehaviour'
@@ -133,15 +121,20 @@ debug_output_path = '.hidden/debug_output/loot_table_debug_output.txt'
 # Ensure the output and debug directories exist
 os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
-# Load GUID mapping
-guid_mapping = load_guid_mapping(guid_mapping_path)
+try:
+    # Load GUID mapping
+    guid_mapping = guid_utils.load_guid_lookup(guid_mapping_path)
 
-# Parse loot tables
-parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, output_files, debug_output_path)
+    # Parse loot tables
+    parse_loot_tables(input_directory, guid_mapping, loot_table_list_path, output_files, debug_output_path)
 
-# Close all output files
-for file in output_files.values():
-    file.close()
+    # Close all output files
+    for file in output_files.values():
+        file.close()
 
-print("Parsing completed successfully.")
-print(f"Debug information has been written to {debug_output_path}")
+    # Print the required messages to the terminal
+    print("Parsing completed successfully.")
+    print(f"Debug information has been written to '{debug_output_path}'")
+except Exception as e:
+    log_debug(f'An error occurred: {str(e)}')
+    print(f"An error occurred. Check the debug output for details: '{debug_output_path}'")
