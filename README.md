@@ -57,6 +57,16 @@ shop_catalog_parser.py --<br>
   Formats everything in the shop template.<br>
   Outputs each shop into a different file in `Output/Shops`<br>
 
+cutscenes.py --<br>
+  Dump of a bunch of cutscene information.
+
+cutscenes_build_tree.py --<br>
+  Builds a tree of cutscenes to follow in an order.
+
+# Util Scripts --<br>
+guid_utils.py - All of the mapping stuff in one place.
+unity_yaml_loader.py - Custom constructor to handle Unity's specific YAML tags, in its own file for modularization, so it can be called from other scripts.
+
 # Getting the Assets --
 1. Download an application that allows you to look at the assets. I use [AssetRipper](https://github.com/AssetRipper/AssetRipper) for parsing and [AssetStudio](https://github.com/Perfare/AssetStudio) for sprites, and looking things up on the fly.
 2. In the prefered asset manager, load the `Little-Known Galaxy_Data` folder.
