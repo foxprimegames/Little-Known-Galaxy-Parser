@@ -11,7 +11,7 @@ mapping_file_path = 'Output/guid_lookup.json'
 
 # Function to log debug information
 def log_debug(message):
-    with open(debug_file_path, 'a') as debug_file:
+    with open(debug_file_path, 'a', encoding='utf-8') as debug_file:
         debug_file.write(message + '\n')
 
 # Clear the debug file at the start
@@ -39,26 +39,39 @@ def format_content(npc_name, cine_number, content):
     content = re.sub(r'\$playerName', '[PLAYER]', content)
 
     emote_count = 1
-    text_pattern = re.compile(r'"text": "([^"]+)"(, "expression": "([^"]+)")?')
-    option_pattern = re.compile(r'"optionText": "([^"]+)", "response": "([^"]+)"(, "responseExpression": "([^"]+)")?')
+    text_pattern = re.compile(r'"text":\s*"(.*?)"(?:,\n.*?"expression":\s*"(.*?)")?(?:,\n.*?"optionOne":\s*\{.*?"optionText":\s*"(.*?)",.*?"response":\s*"(.*?)"(?:,\n.*?"responseExpression":\s*"(.*?)")?.*?\},\n.*?"optionTwo":\s*\{.*?"optionText":\s*"(.*?)",.*?"response":\s*"(.*?)"(?:,\n.*?"responseExpression":\s*"(.*?)")?.*?\})?', re.DOTALL)
 
-    for match in text_pattern.finditer(content):
-        text = match.group(1)
-        expression = match.group(3)
+    matches = text_pattern.finditer(content)
+    for match in matches:
+        text = re.sub(r'\\n', '<br>', match.group(1))
+        expression = match.group(2)
+        option_one_text = re.sub(r'\\n', '<br>', match.group(3)) if match.group(3) else None
+        option_one_response = re.sub(r'\\n', '<br>', match.group(4)) if match.group(4) else None
+        option_one_expression = match.group(5)
+        option_two_text = re.sub(r'\\n', '<br>', match.group(6)) if match.group(6) else None
+        option_two_response = re.sub(r'\\n', '<br>', match.group(7)) if match.group(7) else None
+        option_two_expression = match.group(8)
+
         formatted_content += f"|{text}"
         if expression:
             formatted_content += f"|emote{emote_count}={expression}"
         formatted_content += "\n"
+
+        if option_one_text and option_one_response:
+            formatted_content += f"   |option{emote_count}A={option_one_text}|response{emote_count}A={option_one_response}"
+            if option_one_expression:
+                formatted_content += f"|emote{emote_count}A={option_one_expression}"
+            formatted_content += "\n"
+        if option_two_text and option_two_response:
+            formatted_content += f"   |option{emote_count}B={option_two_text}|response{emote_count}B={option_two_response}"
+            if option_two_expression:
+                formatted_content += f"|emote{emote_count}B={option_two_expression}"
+            formatted_content += "\n"
+
         emote_count += 1
 
-    options = option_pattern.findall(content)
-    for i, option in enumerate(options, start=1):
-        option_text, response_text, _, response_expression = option
-        formatted_content += f"   |option{emote_count}{chr(64+i)}={option_text}\n"
-        formatted_content += f"   |response{emote_count}{chr(64+i)}={response_text}\n"
-        if response_expression:
-            formatted_content += f"   |emote{emote_count}{chr(64+i)}={response_expression}\n"
     formatted_content += "}}\n"
+    log_debug(f"Formatted content: {formatted_content[:500]}...")  # Log the beginning of the formatted content
     return formatted_content
 
 try:
@@ -70,7 +83,7 @@ try:
     log_debug(f"Mappings content: {mappings['save_id_to_name']}")
 
     # Read the input file
-    with open(input_file_path, 'r') as file:
+    with open(input_file_path, 'r', encoding='utf-8') as file:
         content = file.read()
 
     # Log the length of the content read
@@ -124,7 +137,7 @@ try:
     # Write each NPC's content to a separate file
     for npc_name, content in npc_contents.items():
         output_file_path = os.path.join(output_folder, f'courtship_cine_{npc_name}.txt')
-        with open(output_file_path, 'w') as output_file:
+        with open(output_file_path, 'w', encoding='utf-8') as output_file:
             output_file.write(content)
         log_debug(f"Written content to {output_file_path}")
 
@@ -134,4 +147,3 @@ try:
 except Exception as e:
     log_debug(f'An error occurred: {str(e)}')
     print(f"An error occurred. Check the debug output for details: '{debug_file_path}'")
-
