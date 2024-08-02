@@ -63,6 +63,15 @@ cutscenes.py --<br>
 cutscenes_build_tree.py --<br>
   Builds a tree of cutscenes to follow in an order.
 
+cutscenes_courting.py --<br>
+  Creates a file for each of the RNPCs, with their date cinematic dialogue.
+
+captain_rank_numbers.py --<br>
+  Data dump of different ways to earn exp for the captain rank.
+
+friendship_points.py --<br>
+  Data dump of how to earn frienship points and their amounts for different actions.
+
 # Util Scripts --<br>
 guid_utils.py - All of the mapping stuff in one place.
 unity_yaml_loader.py - Custom constructor to handle Unity's specific YAML tags, in its own file for modularization, so it can be called from other scripts.

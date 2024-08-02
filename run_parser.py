@@ -19,7 +19,9 @@ scripts = [
     r"Scripts\recipe_crafting_parser.py",
     r"Scripts\recipe_machine_production_parser.py",
     r"Scripts\shop_catalog_parser.py",
-    r"Scripts\decoration_fixture_parser.py"
+    r"Scripts\decoration_fixture_parser.py",
+    r"Scripts\captain_rank_numbers.py",
+    r"Scripts\friendship_points.py"
 ]
 
 # Path to the debug output file
