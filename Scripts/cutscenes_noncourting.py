@@ -12,7 +12,7 @@ mapping_file_path = 'Output/guid_lookup.json'
 
 # Function to log debug information
 def log_debug(message):
-    with open(debug_file_path, 'a') as debug_file:
+    with open(debug_file_path, 'a', encoding='utf-8') as debug_file:
         debug_file.write(message + '\n')
 
 # Clear the debug file at the start
@@ -45,17 +45,19 @@ def format_and_write_non_courting_regions(content, mappings):
 
                 formatted_content = f'data["{title_formatted}"] = {{\n'
 
-                # Extract NPC dialogue blocks
-                npc_blocks_pattern = re.compile(r'"key": "(npc_\d+)",[\s\S]*?\n\s*"textSet": \[(.*?)\]', re.DOTALL)
-                npc_blocks = npc_blocks_pattern.findall(region_content)
+                # Find dialogue sets within each region
+                text_pattern = re.compile(r'"key":\s*"(npc_\d+|None)"\s*,[\s\S]*?"textSet":\s*\[(.*?)\s*\]', re.DOTALL)
+                dialogue_sets = text_pattern.findall(region_content)
 
-                for npc_key, texts in npc_blocks:
-                    npc_name = guid_utils.get_name_from_save_id(npc_key, mappings)
-                    text_entries = re.findall(r'\{\n\s*"text": "(.*?)"(?:,\s*"expression": "(.*?)")?\s*\}', texts)
+                for dialogue_set in dialogue_sets:
+                    npc_key, texts = dialogue_set
+                    npc_name = "None" if npc_key == "None" else guid_utils.get_name_from_save_id(npc_key, mappings)
+                    text_entries = re.findall(r'\{[^}]*"text":\s*"([^"]+)"(?:,\s*"expression":\s*"([^"]+)")?[^}]*\}', texts)
 
-                    for text, expression in text_entries:
-                        text = re.sub(r'\$playerName', '[PLAYER]', text)
+                    for text_entry in text_entries:
+                        text = text_entry[0].replace('$shipName', '[SHIP NAME]')
                         text = re.sub(r'\\n', '<br>', text)
+                        expression = text_entry[1]
                         formatted_content += f'    {{npc = "{npc_name}", text = "{text}"'
                         if expression:
                             formatted_content += f', emote = "{expression}"'

@@ -67,7 +67,7 @@ cutscenes_courting.py --<br>
   Creates a file for each of the RNPCs, with their date cinematic dialogue.
 
 cutscenes_noncourting.py --<br>
-  Creates a file that displays all other non-courting cutscenes.
+  Creates a file that displays all other non-courting cutscenes. This output should be put in `Module:Cine/data`.
 
 captain_rank_numbers.py --<br>
   Data dump of different ways to earn exp for the captain rank.
