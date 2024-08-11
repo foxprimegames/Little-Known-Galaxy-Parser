@@ -57,7 +57,7 @@ shop_catalog_parser.py --<br>
   Formats everything in the shop template.<br>
   Outputs each shop into a different file in `Output/Shops`<br>
 
-cutscenes.py --<br>
+cutscenes_overview.py --<br>
   Dump of a bunch of cutscene information.
 
 cutscenes_build_tree.py --<br>
@@ -65,6 +65,9 @@ cutscenes_build_tree.py --<br>
 
 cutscenes_courting.py --<br>
   Creates a file for each of the RNPCs, with their date cinematic dialogue.
+
+cutscenes_noncourting.py --<br>
+  Creates a file that displays all other non-courting cutscenes.
 
 captain_rank_numbers.py --<br>
   Data dump of different ways to earn exp for the captain rank.
