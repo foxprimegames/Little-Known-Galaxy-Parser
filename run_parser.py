@@ -21,7 +21,11 @@ scripts = [
     r"Scripts\shop_catalog_parser.py",
     r"Scripts\decoration_fixture_parser.py",
     r"Scripts\captain_rank_numbers.py",
-    r"Scripts\friendship_points.py"
+    r"Scripts\friendship_points.py",
+    r"Scripts\cutscenes_build_tree.py",
+    r"Scripts\cutscenes_courting.py",
+    r"Scripts\cutscenes_noncourting.py",
+    r"Scripts\library_sim.py"
 ]
 
 # Path to the debug output file
