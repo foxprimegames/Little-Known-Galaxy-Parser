@@ -75,6 +75,9 @@ captain_rank_numbers.py --<br>
 friendship_points.py --<br>
   Data dump of how to earn frienship points and their amounts for different actions.
 
+library_sim.py --<br>
+  Data dump of all of the books for the LIBRARY.sim. This output should be put in `Module:Library/data`.
+
 # Util Scripts --<br>
 guid_utils.py - All of the mapping stuff in one place.
 unity_yaml_loader.py - Custom constructor to handle Unity's specific YAML tags, in its own file for modularization, so it can be called from other scripts.
