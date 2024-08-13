@@ -84,10 +84,10 @@ unity_yaml_loader.py - Custom constructor to handle Unity's specific YAML tags, 
 
 # Getting the Assets --
 1. Download an application that allows you to look at the assets. I use [AssetRipper](https://github.com/AssetRipper/AssetRipper) for parsing and [AssetStudio](https://github.com/Perfare/AssetStudio) for sprites, and looking things up on the fly.
-2. In the prefered asset manager, load the `Little-Known Galaxy_Data` folder.
+2. In the preferred asset manager, load the `Little-Known Galaxy_Data` folder.
   * Windows: `C:/Program Files (x86)/Steam/steamapps/common/Little-Known Galaxy/Little-Known Galaxy_Data`
   * Linux: `${HOME}/.steam/steam/steamapps/common/Little-Known Galaxy/Little-Known Galaxy_Data`
-3. Export -> All Files/Assets (depending on your prefered application). Put it into a folder, I prefer to put it in a folder with the patch number, but you do  you.
+3. Export -> All Files/Assets (depending on your preferred application). Put it into a folder, I prefer to put it in a folder with the patch number, but you do  you.
 
 ## Directory Structure
 ```
