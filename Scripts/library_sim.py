@@ -12,9 +12,11 @@ def clean_header(header):
     header = re.sub(r'\.{3,}', '', header).strip()
     return header
 
-# Function to convert \n to <br> and format the Lua data
-def format_body_text(text):
-    return text.replace("\\n", "<br>")
+# Function to clean the body text, removing <style=Item> and </style> tags
+def clean_body_text(text):
+    # Remove <style=Item> and </style> tags, keeping the content inside
+    text = re.sub(r'<style=Item>(.*?)</style>', r'\1', text)
+    return text.replace("\\n", "<br>")  # Convert \n to <br>
 
 # Function to determine the correct data title based on the presence of a colon
 def get_data_title(library_subtopic):
@@ -25,9 +27,8 @@ def get_data_title(library_subtopic):
 def process_library_file(input_file, output_file, debug_file):
     try:
         with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', encoding='utf-8') as outfile, open(debug_file, 'w', encoding='utf-8') as debugfile:
-            # Add text at the top of the file
-            outfile.write("-- This data needs to be replaced here: https://lkg.wiki.gg/wiki/Module:Library/data\n\n")
-            outfile.write("local data = {}\n\n")
+            # Log initial info to the debug file
+            debugfile.write("Starting file processing...\n")
             
             current_header = ""
             
@@ -79,21 +80,18 @@ def process_library_file(input_file, output_file, debug_file):
                         if library_key and library_subtopic and library_body:
                             break
                     
-                    # If all required parts were captured, write the data entry
+                    # If all required parts were captured, write the formatted book entry
                     if library_key and library_subtopic and library_body:
-                        data_title = get_data_title(library_subtopic)
-                        outfile.write(f'data["{data_title}"] = {{\n')
-                        outfile.write(f'    header = "{current_header}",\n')
-                        outfile.write(f'    title = "{library_subtopic}",\n')
-                        outfile.write(f'    body = "{format_body_text(library_body)}"\n')
-                        outfile.write(f'}}\n\n')
-                        debugfile.write(f"Processed entry: {data_title} with header: {current_header}\n")
+                        formatted_body = clean_body_text(library_body)
+                        outfile.write(f'{{{{Book|collapsed=false\n')
+                        outfile.write(f'|header={current_header}\n')
+                        outfile.write(f'|title={library_subtopic}\n')
+                        outfile.write(f'|{formatted_body}}}}}\n\n')
+                        debugfile.write(f"Processed entry: {library_subtopic} with header: {current_header}\n")
                     else:
                         debugfile.write(f"Skipped entry due to missing data. Key: {library_key}, Subtopic: {library_subtopic}, Body: {library_body}\n")
 
-            outfile.write("return data\n")
-
-        print(f"Processing complete. Lua data saved to {output_file}.")
+        print(f"Processing complete. Formatted output saved to {output_file}.")
     except Exception as e:
         print(f"An error occurred: {e}")
         with open(debug_file, 'a', encoding='utf-8') as debugfile:
@@ -101,7 +99,7 @@ def process_library_file(input_file, output_file, debug_file):
 
 # Paths
 input_directory = 'Input/Assets/TextAsset/English_Library.txt'
-output_file_path = 'Output/LIBRARY_sim.lua'
+output_file_path = 'Output/LIBRARY_sim.txt'  # Output to a .txt file
 debug_output_path = '.hidden/debug_output/lib_sim_debug.txt'
 
 # Ensure output directories exist
