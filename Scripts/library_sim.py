@@ -5,11 +5,22 @@ import os
 def to_title_case(s):
     return s.replace("_", " ").title()
 
-# Function to clean the header
+# Function to clean and replace the header
 def clean_header(header):
     # Remove "Topic" and trailing dots
     header = header.replace("Topic", "").strip()
     header = re.sub(r'\.{3,}', '', header).strip()
+
+    # Replace specific headers
+    if header == "Alliance":
+        header = "Space Alliance"
+    elif header == "Arts Literature":
+        header = "Arts & Literature"
+    elif header == "Ship":
+        header = "Ship Class"
+    elif header == "Crew":
+        header = "Crew Relations"
+
     return header
 
 # Function to clean the body text, removing <style=Item> and </style> tags
