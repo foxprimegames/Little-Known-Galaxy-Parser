@@ -246,7 +246,7 @@ def main():
     debug_info = []
     
     try:
-        guid_lookup = guid_utils.load_guid_lookup(guid_lookup_path)
+        guid_lookup = guid_utils.create_mappings(guid_utils.load_guid_lookup(guid_lookup_path))
         debug_info.append(f"Loaded GUID lookup from: {guid_lookup_path}")
     except Exception as e:
         debug_info.append(f"Failed to load GUID lookup: {e}")
