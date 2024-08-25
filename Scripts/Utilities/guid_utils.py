@@ -44,6 +44,7 @@ def create_mappings(lookup_data):
         'filename_to_guid': filename_to_guid,
     }
 
+# Existing functions for getting information
 def get_name_from_guid(guid, mappings):
     return mappings['guid_to_name'].get(guid, 'Unknown')
 

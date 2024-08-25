@@ -18,8 +18,8 @@ os.makedirs(debug_folder, exist_ok=True)
 
 # Function to log debug information
 def log_debug(message):
-    with open(debug_file, 'a', encoding='utf-8') as debug_file:
-        debug_file.write(message + '\n')
+    with open(debug_file, 'a', encoding='utf-8') as file_handle:
+        file_handle.write(message + '\n')
 
 # Load the guid lookup data
 try:

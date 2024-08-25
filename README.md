@@ -29,7 +29,7 @@ loot_list_parser.py & loot_table_parser.py -- <br>
 mission_infobox.py --<br>
   Creates a list of mission infoboxes, in proper wiki format.<br>
 
-missions_npc_request.py --<br>
+missions_npc_bb_item_request.py --<br>
   Creates a list of items different NPCs will request from bulletin board missions.<br>
 
 npc_gift_overrides_parser.py --<br>
@@ -83,7 +83,7 @@ guid_utils.py - All of the mapping stuff in one place.<br>
 unity_yaml_loader.py - Custom constructor to handle Unity's specific YAML tags, in its own file for modularization, so it can be called from other scripts.
 
 # Getting the Assets --
-1. Download an application that allows you to look at the assets. I use [AssetRipper](https://github.com/AssetRipper/AssetRipper) for parsing and [AssetStudio](https://github.com/Perfare/AssetStudio) for sprites, and looking things up on the fly.
+1. Download an application that allows you to look at the assets. I use [AssetRipper](https://github.com/AssetRipper/AssetRipper) for parsing and [AssetStudio](https://github.com/Perfare/AssetStudio) for sprites, and looking things up on the fly. For this parser I'll be using the file types that are extracted from AssetRipper. The scripts may need to be altarted if you use a different format.
 2. In the preferred asset manager, load the `Little-Known Galaxy_Data` folder.
   * Windows: `C:/Program Files (x86)/Steam/steamapps/common/Little-Known Galaxy/Little-Known Galaxy_Data`
   * Linux: `${HOME}/.steam/steam/steamapps/common/Little-Known Galaxy/Little-Known Galaxy_Data`
@@ -110,8 +110,8 @@ unity_yaml_loader.py - Custom constructor to handle Unity's specific YAML tags, 
     │   ├── PrefabInstance
     │   ├── RenderTexture
     │   ├── Resources
-    │   ├── Scenes
-    │   ├── Scripts                  
+    │   ├── Scenes            # This is where the cutscene information is.
+    │   ├── Scripts           # This holds various scripts that coorelates data.      
     │   ├── Shader
     │   ├── Sprite
     │   ├── StreamingAssets
