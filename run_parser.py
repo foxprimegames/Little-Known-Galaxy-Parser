@@ -48,14 +48,18 @@ def execute_script(script_path):
         with open(debug_output_path, 'a') as debug_file:
             debug_file.write(error_message)
         print(error_message)  # Print error to terminal as well
+        return False
+    return True
 
 # Change the working directory to the script's directory
 os.chdir(os.path.dirname(__file__))
 
 # Execute each script in order
 for script in scripts:
-    execute_script(script)
-    print(f"Executed {script} successfully.")
+    if execute_script(script):
+        print(f"Executed {script} successfully.")
+    else:
+        print(f"FAILED to execute {script} !  Check {debug_output_path} for details.")
 
 # Provide a link to the debug file at the end
 print(f"Debug information has been written to {debug_output_path}")
