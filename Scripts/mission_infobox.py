@@ -260,7 +260,7 @@ def main():
     except Exception as e:
         debug_info.append(f"Failed to parse quests: {e}")
         write_debug_info(debug_info, debug_output_path)
-        return
+        raise
 
     try:
         formatted_quests, format_quest_debug_info = format_quest_info(quests, guid_lookup)
@@ -269,6 +269,8 @@ def main():
         debug_info.append(f"Wrote formatted quests to: {output_file_path}")
     except Exception as e:
         debug_info.append(f"Failed to format/write quests: {e}")
+        write_debug_info(debug_info, debug_output_path)
+        raise
 
     write_debug_info(debug_info, debug_output_path)
     print("Mission infoboxes have been generated and written to the output file.")
