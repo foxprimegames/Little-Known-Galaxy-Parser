@@ -1,5 +1,6 @@
 import subprocess
 import os
+import sys
 
 # List of scripts to execute (relative paths using raw strings or forward slashes)
 scripts = [
@@ -38,7 +39,7 @@ os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
 def execute_script(script_path):
     try:
-        result = subprocess.run(["python", script_path], check=True, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, script_path], check=True, capture_output=True, text=True)
         with open(debug_output_path, 'a') as debug_file:
             debug_file.write(f"Executed {script_path} successfully.\n")
             debug_file.write(f"Output:\n{result.stdout}\n")
