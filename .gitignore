@@ -1,5 +1,6 @@
-input/
-output/
+Input*/
+Output*/
 .hidden/
 __pycache__
 Scripts/Utilities/__pycache__
+venv/

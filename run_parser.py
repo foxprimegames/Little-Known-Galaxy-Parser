@@ -1,5 +1,6 @@
 import subprocess
 import os
+import sys
 
 # List of scripts to execute (relative paths using raw strings or forward slashes)
 scripts = [
@@ -38,7 +39,7 @@ os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
 def execute_script(script_path):
     try:
-        result = subprocess.run(["python", script_path], check=True, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, script_path], check=True, capture_output=True, text=True)
         with open(debug_output_path, 'a') as debug_file:
             debug_file.write(f"Executed {script_path} successfully.\n")
             debug_file.write(f"Output:\n{result.stdout}\n")
@@ -47,14 +48,18 @@ def execute_script(script_path):
         with open(debug_output_path, 'a') as debug_file:
             debug_file.write(error_message)
         print(error_message)  # Print error to terminal as well
+        return False
+    return True
 
 # Change the working directory to the script's directory
 os.chdir(os.path.dirname(__file__))
 
 # Execute each script in order
 for script in scripts:
-    execute_script(script)
-    print(f"Executed {script} successfully.")
+    if execute_script(script):
+        print(f"Executed {script} successfully.")
+    else:
+        print(f"FAILED to execute {script} !  Check {debug_output_path} for details.")
 
 # Provide a link to the debug file at the end
 print(f"Debug information has been written to {debug_output_path}")
