@@ -1,9 +1,8 @@
-import json
-import os
 import re
+import os
+import json
 import yaml
-from Utilities import guid_utils
-from Utilities.unity_yaml_loader import preprocess_yaml_content
+from Utilities.unity_yaml_loader import preprocess_yaml_content, add_unity_yaml_constructors
 
 # Define paths
 input_file_path = 'Input/Assets/TextAsset/English_Quests.txt'
@@ -16,264 +15,159 @@ debug_output_path = '.hidden/debug_output/mission_infobox_debug.txt'
 os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 os.makedirs(os.path.dirname(debug_output_path), exist_ok=True)
 
+# Initialize debug file (replace content each run)
+def initialize_debug_file():
+    with open(debug_output_path, 'w', encoding='utf-8') as debug_file:
+        debug_file.write("Debug Log Initialized\n")
+
 def log_debug(message):
     with open(debug_output_path, 'a', encoding='utf-8') as debug_file:
         debug_file.write(message + '\n')
 
-def parse_mono_behaviour(file_path, lookup):
-    debug_info = []
+# Initialize the debug file
+initialize_debug_file()
+
+# Load GUID lookup from JSON file
+with open(guid_lookup_path, 'r', encoding='utf-8') as file:
+    guid_lookup = json.load(file)
+
+def lookup_guid(guid, return_field='name'):
+    for entry in guid_lookup:
+        if entry.get('guid') == guid:
+            return entry.get(return_field, 'Unknown')
+    return 'Unknown'
+
+# Add Unity YAML constructors
+add_unity_yaml_constructors()
+
+def parse_mono_behaviour_file(filename):
+    file_path = os.path.join(mono_behaviour_path, f"{filename}.asset")
+    log_debug(f"Attempting to load file: {file_path}")
+
     if not os.path.exists(file_path):
-        debug_info.append(f"File not found: {file_path}")
-        return None, debug_info
-    
+        log_debug(f"File not found: {file_path}")
+        return {}
+
     with open(file_path, 'r', encoding='utf-8') as file:
         try:
             content = file.read()
-            content = preprocess_yaml_content(content)
-            yaml_content = yaml.safe_load(content)
-            mono_behaviour = yaml_content.get('MonoBehaviour', {})
-            add_items_on_complete = mono_behaviour.get('addItemsOnComplete', [])
-            
-            if not isinstance(add_items_on_complete, list):
-                debug_info.append(f"Expected list for 'addItemsOnComplete', got {type(add_items_on_complete)}")
-                add_items_on_complete = []
-            
-            rewards = []
-            for item in add_items_on_complete:
-                if isinstance(item, dict):
-                    item_data = item.get('itemData', {}).get('guid', 'None')
-                    amount_of_item = item.get('amountOfItem', 'N/A')
-                    if item_data != 'None':
-                        item_name = guid_utils.get_name_from_guid(item_data, lookup)
-                        rewards.append(f"{item_name}*{amount_of_item}")
-                    else:
-                        rewards.append(f"{item_data}*{amount_of_item}")
-                else:
-                    debug_info.append(f"Expected dict for items in 'addItemsOnComplete', got {type(item)}")
+            log_debug(f"Raw content of {file_path}:\n{content}\n")
 
-            expires_in_days = mono_behaviour.get('expiresInDays', 'N/A')
+            # Preprocess the YAML content
+            content = preprocess_yaml_content(content)
+            log_debug(f"Preprocessed content of {file_path}:\n{content}\n")
+
+            # Parse the YAML content
+            mono_behaviour = yaml.safe_load(content).get('MonoBehaviour', {})
+            log_debug(f"Parsed MonoBehaviour data: {mono_behaviour}")
+
+            # Process fields
+            expires_in_days = mono_behaviour.get('expiresInDays', 'Unknown')
             if isinstance(expires_in_days, dict) and expires_in_days.get('fileID') == 0:
-                expires_in_days = "Unlimited"
+                expires_in_days = 'Unlimited'
+            npc_owner_guid = mono_behaviour.get('npcOwner', {}).get('guid', 'Unknown')
+            npc_owner_name = lookup_guid(npc_owner_guid)
 
-            quest_type_mapping = {0: "Primary", 1: "Crew", 2: "BB"}
-            quest_type = mono_behaviour.get('questType', 'N/A')
-            quest_type = quest_type_mapping.get(quest_type, quest_type)
+            # Replace GUIDs in goalsList and cinesToAddAtActivation with filenames
+            goals_list = '; '.join(lookup_guid(goal.get('guid', 'Unknown'), 'filename') for goal in mono_behaviour.get('goalsList', []))
+            cines_to_add = '; '.join(lookup_guid(cine.get('guid', 'Unknown'), 'filename') for cine in mono_behaviour.get('cinesToAddAtActivation', []))
 
-            unlock_store_items_at_complete = '; '.join(
-                guid_utils.get_filename_from_guid(item.get('guid', 'None'), lookup) for item in mono_behaviour.get('unlockStoreItemsAtComplete', [])
-            )
+            # Replace GUIDs in questsToAddAtActivation and unlockQuests with names
+            quests_to_add = '; '.join(lookup_guid(quest.get('guid', 'Unknown')) for quest in mono_behaviour.get('questsToAddAtActivation', []))
+            unlock_quests = '; '.join(lookup_guid(quest.get('guid', 'Unknown')) for quest in mono_behaviour.get('unlockQuests', []))
 
-            add_emails = '; '.join(
-                guid_utils.get_filename_from_guid(email.get('guid', 'None'), lookup) for email in mono_behaviour.get('addEmails', [])
-            )
+            # Replace GUIDs in unlockStoreItemsOnActivate with filenames
+            unlock_store_items = '; '.join(lookup_guid(item.get('guid', 'Unknown'), 'filename') for item in mono_behaviour.get('unlockStoreItemsOnActivate', []))
+            purchase_store_items = '; '.join(lookup_guid(item.get('guid', 'Unknown'), 'filename') for item in mono_behaviour.get('purchaseStoreItemsAtComplete', []))
 
-            data = {
-                'questType': quest_type,
-                'npcOwner': mono_behaviour.get('npcOwner', {}).get('guid', file_path),
-                'goalsList': '; '.join(goal.get('guid', file_path) for goal in mono_behaviour.get('goalsList', [])),
+            return {
+                'questType': mono_behaviour.get('questType', 'Unknown'),
+                'npcOwner': npc_owner_name,
+                'goalsList': goals_list,
                 'expiresInDays': expires_in_days,
-                'unlockStoreItemsAtComplete': unlock_store_items_at_complete,
-                'addItemsOnComplete': '; '.join(rewards),
-                'unlockQuests': '; '.join(quest.get('guid', file_path) for quest in mono_behaviour.get('unlockQuests', [])),
-                'addEmails': add_emails
+                'activateAfterDays': mono_behaviour.get('activateAfterDays', 'Unknown'),
+                'questsToAddAtActivation': quests_to_add,
+                'cinesToAddAtActivation': cines_to_add,
+                'unlockStoreItemsOnActivate': unlock_store_items,
+                'purchaseStoreItemsAtComplete': purchase_store_items,
+                'unlockQuests': unlock_quests,
             }
-            debug_info.append(f"Parsed data from {file_path}: {data}")
         except yaml.YAMLError as e:
-            debug_info.append(f"Error parsing YAML in {file_path}: {e}")
-            return None, debug_info
-    return data, debug_info
-
-def parse_goal(file_path, lookup):
-    debug_info = []
-    requires = []
-    if not os.path.exists(file_path):
-        debug_info.append(f"File not found: {file_path}")
-        return requires, debug_info
-
-    with open(file_path, 'r', encoding='utf-8') as file:
-        try:
-            content = file.read()
-            content = preprocess_yaml_content(content)
-            yaml_content = yaml.safe_load(content)
-            goal_data = yaml_content.get('MonoBehaviour', {})
-            item_to_collect = goal_data.get('itemToCollect', {}).get('guid')
-            if item_to_collect:
-                item_name = guid_utils.get_name_from_guid(item_to_collect, lookup)
-                required_amount = goal_data.get('requiredAmount', 'N/A')
-                quality_required = goal_data.get('itemQuery', {}).get('qualityRequired', 0)
-
-                if quality_required == 1:
-                    if item_name.lower().startswith("super "):
-                        item_name = item_name[6:]
-                    requires.append(f"{item_name}*{required_amount}/1")
-                else:
-                    requires.append(f"{item_name}*{required_amount}")
-            else:
-                filename = os.path.basename(file_path).replace('.asset', '')
-                requires.append(filename)
-
-            debug_info.append(f"Parsed goal from {file_path}: {requires}")
-
-        except yaml.YAMLError as e:
-            debug_info.append(f"Error parsing YAML in {file_path}: {e}")
-            return requires, debug_info
-    return requires, debug_info
-
-def parse_quests(file_path):
-    debug_info = []
-    quests = []
-    with open(file_path, 'r', encoding='utf-8') as file:
-        content = file.read()
-        regions = re.findall(r'//#region\s+([^#]+?)\s+\.*?\s*\n(.*?)\n\s*//#endregion', content, re.DOTALL)
-        for region_name, region_content in regions:
-            quest_key = re.search(r'"questKey":\s*"([^"]+)"', region_content)
-            quest_name = re.search(r'"questName":\s*"([^"]+)"', region_content)
-            quest_description = re.search(r'"questDescription":\s*"([^"]+)"', region_content)
-            if quest_key and quest_name and quest_description:
-                quests.append({
-                    'region': region_name.strip().replace(' ', '_'),
-                    'key': quest_key.group(1),
-                    'name': quest_name.group(1),
-                    'description': quest_description.group(1)
-                })
-                debug_info.append(f"Parsed quest: {quest_name.group(1)} in region: {region_name.strip()}")
-            else:
-                debug_info.append(f"Failed to parse quest in region: {region_name.strip()}")
-    return quests, debug_info
-
-def replace_guids_with_filenames(text, lookup):
-    items = text.split('; ')
-    replaced = []
-    for item in items:
-        if '*' in item:
-            guid, amount = item.split('*')
-            name = guid_utils.get_name_from_guid(guid, lookup)
-            replaced.append(f"{name}*{amount}")
-        else:
-            name = guid_utils.get_name_from_guid(item, lookup)
-            replaced.append(name)
-    return '; '.join(replaced)
-
-def format_quest_info(quests, guid_lookup):
-    formatted_quests = []
-    debug_info = []
-    for quest in quests:
-        try:
-            mono_file_name = guid_utils.get_filename_from_save_id(quest['key'], guid_lookup)
-            debug_info.append(f"Mono file name for quest {quest['name']}: {mono_file_name}")
-            
-            if mono_file_name:
-                mono_file_path = os.path.join(mono_behaviour_path, f"{mono_file_name}.asset")
-                debug_info.append(f"Processing MonoBehaviour file: {mono_file_path}")
-                
-                mono_data, mono_debug_info = parse_mono_behaviour(mono_file_path, guid_lookup)
-                debug_info.extend(mono_debug_info)
-
-                requires = []
-                if mono_data:
-                    debug_info.append(f"Mono data found: {mono_data}")
-                    for goal_guid in mono_data['goalsList'].split('; '):
-                        goal_filename = guid_utils.get_filename_from_guid(goal_guid, guid_lookup)
-                        goal_path = os.path.join(mono_behaviour_path, f"{goal_filename}.asset")
-                        goal_requires, goal_debug_info = parse_goal(goal_path, guid_lookup)
-                        if goal_requires:
-                            requires.extend(goal_requires)
-                        else:
-                            requires.append(os.path.basename(goal_filename))
-                        debug_info.extend(goal_debug_info)
-
-                    next_quests = replace_guids_with_filenames(mono_data['unlockQuests'], guid_lookup)
-                    unlock_store_items = replace_guids_with_filenames(mono_data['unlockStoreItemsAtComplete'], guid_lookup)
-
-                    formatted_quests.append(
-                        f"## {quest['name']} - {quest['key']}\n"
-                        f"{{{{Mission infobox\n"
-                        f"|name     = {quest['name']}\n"
-                        f"|id       = {quest['region']}\n"
-                        f"|obj      = {quest['description']}\n"
-                        f"|type     = {mono_data['questType']}\n"
-                        f"|time     = {mono_data['expiresInDays']}\n"
-                        f"|location = \n"
-                        f"|prereq   = \n"
-                        f"|requires = {'; '.join(requires)}\n"
-                        f"|rewards  = {replace_guids_with_filenames(mono_data['addItemsOnComplete'], guid_lookup)}\n"
-                        f"|npcs     = {guid_utils.get_name_from_guid(mono_data['npcOwner'], guid_lookup)}\n"
-                        f"|prev     = \n"
-                        f"|next     = {next_quests}\n"
-                        f"}}}}\n"
-                        f"Unlock Store Items at Complete GUID: {unlock_store_items}\n"
-                        f"Send Email: {replace_guids_with_filenames(mono_data['addEmails'], guid_lookup)}\n"
-                    )
-                else:
-                    formatted_quests.append(
-                        f"## {quest['name']} - {quest['key']}\n"
-                        f"{{{{Mission infobox\n"
-                        f"|name     = {quest['name']}\n"
-                        f"|id       = {quest['region']}\n"
-                        f"|obj      = {quest['description']}\n"
-                        f"|type     = N/A\n"
-                        f"|time     = N/A\n"
-                        f"|location = \n"
-                        f"|prereq   = \n"
-                        f"|requires = \n"
-                        f"|rewards  = \n"
-                        f"|npcs     = \n"
-                        f"|prev     = \n"
-                        f"|next     = \n"
-                        f"}}}}\n"
-                        f"Unlock Store Items at Complete GUID: \n"
-                        f"Send Email: \n"
-                    )
-            else:
-                debug_info.append(f"No filename found for save_id: {quest['key']}")
+            log_debug(f"YAML error reading file {file_path}: {e}")
+            return {}
         except Exception as e:
-            debug_info.append(f"Error formatting quest {quest['name']}: {str(e)}")
-    return formatted_quests, debug_info
+            log_debug(f"General error processing file {file_path}: {e}")
+            return {}
 
-def write_to_file(quests, file_path):
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'w', encoding='utf-8') as file:
-        for quest in quests:
-            file.write(quest + "\n")
+# Read English_Quests.txt, extract questKey, questName, and questDescription from each region
+with open(input_file_path, 'r', encoding='utf-8') as file:
+    content = file.read()
 
-def write_debug_info(debug_info, file_path):
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'w', encoding='utf-8') as file:
-        for info in debug_info:
-            file.write(info + "\n")
+regions = re.findall(r'//#region\s+([^#]+?)\s+\.*?\s*\n(.*?)\n\s*//#endregion', content, re.DOTALL)
 
-def main():
-    debug_info = []
+quests = []
+for region_name, region_content in regions:
+    quest_key = re.search(r'"questKey":\s*"([^"]+)"', region_content)
+    quest_name = re.search(r'"questName":\s*"([^"]+)"', region_content)
+    quest_description = re.search(r'"questDescription":\s*"([^"]+)"', region_content)
     
-    try:
-        guid_lookup = guid_utils.create_mappings(guid_utils.load_guid_lookup(guid_lookup_path))
-        debug_info.append(f"Loaded GUID lookup from: {guid_lookup_path}")
-    except Exception as e:
-        debug_info.append(f"Failed to load GUID lookup: {e}")
-        write_debug_info(debug_info, debug_output_path)
-        return
+    if quest_key and quest_name and quest_description:
+        # Find the filename associated with the questKey in the guid_lookup
+        filename = 'Unknown'
+        for entry in guid_lookup:
+            if entry.get('save_id') == quest_key.group(1):
+                filename = entry.get('filename', 'Unknown')
+                break
 
-    try:
-        quests, parse_quests_debug_info = parse_quests(input_file_path)
-        debug_info.append(f"Parsed quests from file: {input_file_path}")
-        debug_info.extend(parse_quests_debug_info)
-    except Exception as e:
-        debug_info.append(f"Failed to parse quests: {e}")
-        write_debug_info(debug_info, debug_output_path)
-        raise
+        log_debug(f"Quest Key: {quest_key.group(1)} mapped to filename: {filename}")
 
-    try:
-        formatted_quests, format_quest_debug_info = format_quest_info(quests, guid_lookup)
-        debug_info.extend(format_quest_debug_info)
-        write_to_file(formatted_quests, output_file_path)
-        debug_info.append(f"Wrote formatted quests to: {output_file_path}")
-    except Exception as e:
-        debug_info.append(f"Failed to format/write quests: {e}")
-        write_debug_info(debug_info, debug_output_path)
-        raise
+        # Parse the MonoBehaviour file
+        mono_data = parse_mono_behaviour_file(filename)
 
-    write_debug_info(debug_info, debug_output_path)
-    print("Mission infoboxes have been generated and written to the output file.")
+        quests.append({
+            'region': region_name.strip().replace(' ', '_'),
+            'questKey': quest_key.group(1),
+            'questName': quest_name.group(1),
+            'questDescription': quest_description.group(1),
+            'filename': filename,
+            'mono_data': mono_data
+        })
 
-if __name__ == "__main__":
-    main()
+try:
+    with open(output_file_path, 'w', encoding='utf-8') as output_file:
+        for quest in quests:
+            output_file.write(f"\n----------------------------------------\n")
+            output_file.write(f"## Region: {quest['region']}\n")
+            output_file.write(f"{{{{Mission infobox\n")
+            output_file.write(f"|name     = {quest['questName']}\n")
+            output_file.write(f"|id       = {quest['region']}\n")
+            output_file.write(f"|obj      = {quest['questDescription']}\n")
+            output_file.write(f"|type     = {quest['mono_data'].get('questType', 'Unknown')}\n")
+            output_file.write(f"|time     = {quest['mono_data'].get('expiresInDays', 'Unknown')}\n")
+            output_file.write(f"|location = \n")
+            output_file.write(f"|prereq   = \n")
+            output_file.write(f"|requires = {quest['mono_data'].get('goalsList', 'Unknown')}\n")
+            output_file.write(f"|rewards  = \n")
+            output_file.write(f"|npcs     = {quest['mono_data'].get('npcOwner', 'Unknown')}\n")
+            output_file.write(f"|prev     = \n")
+            output_file.write(f"|next     =  }}}}\n")
+
+            # Conditionally display additional fields
+            if quest['mono_data'].get('activateAfterDays', ''):
+                output_file.write(f"activateAfterDays = {quest['mono_data'].get('activateAfterDays')}\n")
+            if quest['mono_data'].get('questsToAddAtActivation', ''):
+                output_file.write(f"questsToAddAtActivation = {quest['mono_data'].get('questsToAddAtActivation')}\n")
+            if quest['mono_data'].get('cinesToAddAtActivation', ''):
+                output_file.write(f"cinesToAddAtActivation = {quest['mono_data'].get('cinesToAddAtActivation')}\n")
+            if quest['mono_data'].get('unlockStoreItemsOnActivate', ''):
+                output_file.write(f"unlockStoreItemsOnActivate = {quest['mono_data'].get('unlockStoreItemsOnActivate')}\n")
+            if quest['mono_data'].get('purchaseStoreItemsAtComplete', ''):
+                output_file.write(f"purchaseStoreItemsAtComplete = {quest['mono_data'].get('purchaseStoreItemsAtComplete')}\n")
+            if quest['mono_data'].get('unlockQuests', ''):
+                output_file.write(f"unlockQuests = {quest['mono_data'].get('unlockQuests')}\n")
+
+    log_debug("Search completed successfully. Output file created.")
+    print(f"Parsed files have been written to '{output_file_path}'")
+except Exception as e:
+    log_debug(f"An error occurred during search: {str(e)}")
+    print(f"An error occurred. Check the debug output for details: '{debug_output_path}'")
